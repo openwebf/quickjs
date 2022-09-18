@@ -52,5 +52,6 @@ add_custom_command(
     COMMAND ${QJSC_EXE} -fbignum -c -o ${PROJECT_SOURCE_DIR}/qjscalc.c ${PROJECT_SOURCE_DIR}/qjscalc.js
 )
 
+add_custom_target(qjs-depends DEPENDS repl.c qjscalc.c)
 add_executable(qjs qjs.c quickjs-libc.c repl.c qjscalc.c)
 target_link_libraries(qjs quickjs ${LINK_LIBRARIES})

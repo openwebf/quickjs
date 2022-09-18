@@ -52,6 +52,5 @@ add_custom_command(
     COMMAND ${QJSC_EXE} -fbignum -c -o ${PROJECT_SOURCE_DIR}/qjscalc.c ${PROJECT_SOURCE_DIR}/qjscalc.js
 )
 
-file(GLOB files repl.c qjscalc.c)
-add_executable(qjs qjs.c quickjs-libc.c ${files})
+add_executable(qjs qjs.c quickjs-libc.c repl.c qjscalc.c)
 target_link_libraries(qjs quickjs ${LINK_LIBRARIES})

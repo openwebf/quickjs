@@ -1,0 +1,9 @@
+build
+bin
+.idea
+.vscode
+lib
+repl.c
+qjscalc.c
+cmake-build-debug
+build

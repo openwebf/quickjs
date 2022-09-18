@@ -33,7 +33,7 @@
 #include <sys/wait.h>
 #endif
 
-#include "cutils.h"
+#include "include/quickjs/cutils.h"
 #include "quickjs-libc.h"
 
 typedef struct {

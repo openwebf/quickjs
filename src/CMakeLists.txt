@@ -46,8 +46,15 @@ execute_process(
     OUTPUT_VARIABLE QUICKJS_VERSION
 )
 
+set(COMPILE_FLAGS -Wall -MMD -Wno-array-bounds -Wno-format-truncation)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(COMPILE_FLAGS ${COMPILE_FLAGS} -g)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(COMPILE_FLAGS ${COMPILE_FLAGS} -O2)
+endif()
+
+add_compile_options(${COMPILE_FLAGS})
 target_compile_options(quickjs PUBLIC
-    -g
     -D_GNU_SOURCE
     -DCONFIG_BIGNUM
     -DCONFIG_VERSION=${\"QUICKJS_VERSION\"}

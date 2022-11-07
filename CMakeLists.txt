@@ -54,3 +54,6 @@ add_custom_command(
 
 add_executable(qjs qjs.c quickjs-libc.c repl.c qjscalc.c)
 target_link_libraries(qjs quickjs ${LINK_LIBRARIES})
+
+add_executable(run-test262 run-test262.c quickjs-libc.c)
+target_link_libraries(run-test262 quickjs ${LINK_LIBRARIES})

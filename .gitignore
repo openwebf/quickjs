@@ -5,3 +5,7 @@ bin
 lib
 cmake-build-debug
 build
+*.expand
+*.svg
+test262_errors.txt
+test262_report.txt

@@ -2102,8 +2102,6 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
 
   raw_array = JS_UNDEFINED; /* avoid warning */
   template_object = JS_UNDEFINED; /* avoid warning */
-  
-  emit_column(s, s->token.column_num);
 
   if (call) {
     /* Create a template object: an array of cooked strings */
@@ -2583,8 +2581,6 @@ static __exception int js_parse_object_literal(JSParseState *s)
   int start_line, start_column, prop_type;
   BOOL has_proto;
 
-  emit_column(s, s->token.column_num);
-
   if (next_token(s))
     goto fail;
   /* XXX: add an initial length that will be patched back */
@@ -2892,8 +2888,6 @@ static __exception int js_parse_class(JSParseState *s, BOOL is_class_expr,
   /* classes are parsed and executed in strict mode */
   saved_js_mode = fd->js_mode;
   fd->js_mode |= JS_MODE_STRICT;
-
-  emit_column(s, s->token.column_num);
 
   if (next_token(s))
     goto fail;
@@ -3331,8 +3325,6 @@ static __exception int js_parse_array_literal(JSParseState *s)
 {
   uint32_t idx;
   BOOL need_length;
-
-  emit_column(s, s->token.column_num);
 
   if (next_token(s))
     return -1;
@@ -4290,9 +4282,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
   int optional_chaining_label, column_num;
   BOOL accept_lparen = (parse_flags & PF_POSTFIX_CALL) != 0;
   call_type = FUNC_CALL_NORMAL;
-
   column_num = s->token.column_num;
-
+  
   switch(s->token.val) {
     case TOK_NUMBER:
     {
@@ -4515,8 +4506,10 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       if (next_token(s))
         return -1;
       if (s->token.val == '.') {
+        emit_column(s, s->token.column_num);
         if (next_token(s))
           return -1;
+
         if (!token_is_pseudo_keyword(s, JS_ATOM_target))
           return js_parse_error(s, "expecting target");
         if (!s->cur_func->new_target_allowed)
@@ -4548,6 +4541,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
           return js_parse_error(s, "super() is only valid in a derived class constructor");
         call_type = FUNC_CALL_SUPER_CTOR;
       } else if (s->token.val == '.' || s->token.val == '[') {
+        emit_column(s, s->token.column_num);
         if (!s->cur_func->super_allowed)
           return js_parse_error(s, "'super' is only valid in a method");
         emit_op(s, OP_scope_get_var);
@@ -4564,7 +4558,9 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
     case TOK_IMPORT:
       if (next_token(s))
         return -1;
+
       if (s->token.val == '.') {
+        emit_column(s, s->token.column_num);
         if (next_token(s))
           return -1;
         if (!token_is_pseudo_keyword(s, JS_ATOM_meta))
@@ -4593,10 +4589,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
   }
 
   optional_chaining_label = -1;
-  if (call_type != FUNC_CALL_NEW) {
-    column_num = s->token.column_num;
-  }
-
+  column_num = s->token.column_num;
   for(;;) {
     JSFunctionDef *fd = s->cur_func;
     BOOL has_optional_chain = FALSE;
@@ -4870,6 +4863,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       emit_column(s, column_num);
       call_type = FUNC_CALL_NORMAL;
     } else if (s->token.val == '.') {
+      emit_column(s, s->token.column_num);
       if (next_token(s))
         return -1;
     parse_property:
@@ -4917,6 +4911,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       }
       if (next_token(s))
         return -1;
+      
+      column_num = s->token.column_num;
       if (js_parse_expr(s))
         return -1;
       if (js_parse_expect(s, ']'))
@@ -4943,8 +4939,6 @@ static __exception int js_parse_delete(JSParseState *s)
   JSFunctionDef *fd = s->cur_func;
   JSAtom name;
   int opcode;
-  
-  emit_column(s, s->token.column_num);
 
   if (next_token(s))
     return -1;
@@ -5004,8 +4998,6 @@ static __exception int js_parse_delete(JSParseState *s)
 static __exception int js_parse_unary(JSParseState *s, int parse_flags)
 {
   int op;
-
-  emit_column(s, s->token.column_num);
 
   switch(s->token.val) {
     case '+':
@@ -5155,8 +5147,6 @@ static __exception int js_parse_expr_binary(JSParseState *s, int level,
                                             int parse_flags)
 {
   int op, opcode;
-
-  emit_column(s, s->token.column_num);
   
   if (level == 0) {
     return js_parse_unary(s, (parse_flags & PF_ARROW_FUNC) |
@@ -5898,8 +5888,6 @@ static __exception int js_parse_var(JSParseState *s, int parse_flags, int tok,
   JSFunctionDef *fd = s->cur_func;
   JSAtom name = JS_ATOM_NULL;
 
-  emit_column(s, s->token.column_num);
-
   for (;;) {
     if (s->token.val == TOK_IDENT) {
       if (s->token.u.ident.is_reserved) {
@@ -6064,8 +6052,6 @@ static __exception int js_parse_for_in_of(JSParseState *s, int label_name,
   label_body = new_label(s);
   label_break = new_label(s);
   label_next = new_label(s);
-
-  emit_column(s, s->token.column_num);
 
   /* create scope for the lexical variables declared in the enumeration
      expressions. XXX: Not completely correct because of weird capturing
@@ -6283,6 +6269,8 @@ static __exception int js_parse_statement_or_decl(JSParseState *s, int decl_mask
   JSAtom label_name;
   int tok;
 
+  emit_column(s, s->token.column_num);
+
   /* specific label handling */
   /* XXX: support multiple labels on loop statements */
   label_name = JS_ATOM_NULL;
@@ -6326,7 +6314,6 @@ static __exception int js_parse_statement_or_decl(JSParseState *s, int decl_mask
     }
   }
 
-  emit_column(s, s->token.column_num);
   switch(tok = s->token.val) {
     case '{':
       if (js_parse_block(s))
@@ -7107,8 +7094,6 @@ static __exception int js_parse_export(JSParseState *s)
   int first_export, idx, i, tok;
   JSAtom module_name;
   JSExportEntry *me;
-
-  emit_column(s, s->token.column_num);
 
   if (next_token(s))
     return -1;
@@ -11684,8 +11669,6 @@ static __exception int js_parse_function_decl2(JSParseState *s,
 
   is_expr = (func_type != JS_PARSE_FUNC_STATEMENT &&
              func_type != JS_PARSE_FUNC_VAR);
-
-  emit_column(s, s->token.column_num);
 
   if (func_type == JS_PARSE_FUNC_STATEMENT ||
       func_type == JS_PARSE_FUNC_VAR ||

@@ -143,7 +143,7 @@ int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const 
     backtrace_flags = JS_BACKTRACE_FLAG_SINGLE_LEVEL;
   build_backtrace(ctx, ctx->rt->current_exception, 
                   s->filename, s->line_num,
-                  s->last_ptr - s->column_ptr, 
+                  s->column_last_ptr - s->column_ptr, 
                   backtrace_flags);
   return -1;
 }
@@ -181,7 +181,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
 {
   uint32_t c;
   StringBuffer b_s, *b = &b_s;
-  s->token.column_num = s->last_ptr - s->column_ptr;
+  s->token.column_num = s->column_last_ptr - s->column_ptr;
 
   /* p points to the first byte of the template part */
   if (string_buffer_init(s->ctx, b, 32))
@@ -214,7 +214,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
     }
     if (c == '\n') {
       s->line_num++;
-      s->last_ptr = p;
+      s->column_last_ptr = p;
       s->column_ptr = p;
     } else if (c >= 0x80) {
       const uint8_t *p_next;
@@ -249,7 +249,7 @@ static __exception int js_parse_string(JSParseState *s, int sep,
   int ret;
   uint32_t c;
   StringBuffer b_s, *b = &b_s;
-  s->token.column_num = s->last_ptr - s->column_ptr;
+  s->token.column_num = s->column_last_ptr - s->column_ptr;
 
   /* string */
   if (string_buffer_init(s->ctx, b, 32))
@@ -307,7 +307,7 @@ static __exception int js_parse_string(JSParseState *s, int sep,
           p++;
           if (sep != '`') {
             s->line_num++;
-            s->last_ptr = p;
+            s->column_last_ptr = p;
             s->column_ptr = p;
           }
           continue;
@@ -579,11 +579,11 @@ static __exception int next_token(JSParseState *s)
 
   free_token(s, &s->token);
 
-  p = s->buf_ptr;
+  p = s->last_ptr = s->buf_ptr;
   s->got_lf = FALSE;
   s->last_line_num = s->token.line_num;
 redo:
-  s->last_ptr = p;
+  s->column_last_ptr = p;
   s->token.line_num = s->line_num;
   s->token.column_num = 0;
   s->token.ptr = p;
@@ -1075,8 +1075,8 @@ redo:
   }
   
   s->buf_ptr = p;
-  if(!s->token.column_num && s->last_ptr > s->column_ptr) {
-    s->token.column_num = s->last_ptr - s->column_ptr;
+  if(!s->token.column_num && s->column_last_ptr > s->column_ptr) {
+    s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
 
   // dump_token(s, &s->token);
@@ -1133,10 +1133,10 @@ __exception int json_next_token(JSParseState *s)
 
   free_token(s, &s->token);
 
-  p = s->buf_ptr;
+  p = s->last_ptr = s->buf_ptr;
   s->last_line_num = s->token.line_num;
 redo:
-  s->last_ptr = p;
+  s->column_last_ptr = p;
   s->token.line_num = s->line_num;
   s->token.column_num = 0;
   s->token.ptr = p;
@@ -1310,8 +1310,8 @@ redo:
   }
 
   s->buf_ptr = p;
-  if(!s->token.column_num && s->last_ptr > s->column_ptr){
-    s->token.column_num = s->last_ptr - s->column_ptr;
+  if(!s->token.column_num && s->column_last_ptr > s->column_ptr){
+    s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
 
   // dump_token(s, &s->token);

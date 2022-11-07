@@ -1074,7 +1074,7 @@ redo:
       break;
   }
   
-  s->buf_ptr = p;
+  s->column_last_ptr = s->buf_ptr = p;
   if(!s->token.column_num && s->column_last_ptr > s->column_ptr) {
     s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
@@ -1309,7 +1309,7 @@ redo:
       break;
   }
 
-  s->buf_ptr = p;
+  s->column_last_ptr = s->buf_ptr = p;
   if(!s->token.column_num && s->column_last_ptr > s->column_ptr){
     s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
@@ -2374,7 +2374,7 @@ static __exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp
 {
   s->token.line_num = sp->last_line_num;
   s->line_num = sp->line_num;
-  s->column_ptr = sp->ptr;
+  s->column_last_ptr = sp->ptr;
   s->buf_ptr = sp->ptr;
   s->got_lf = sp->got_lf;
   return next_token(s);
@@ -4287,11 +4287,11 @@ static void optional_chain_test(JSParseState *s, int *poptional_chaining_label,
 static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
 {
   FuncCallType call_type;
-  int optional_chaining_label;
+  int optional_chaining_label, column_num;
   BOOL accept_lparen = (parse_flags & PF_POSTFIX_CALL) != 0;
   call_type = FUNC_CALL_NORMAL;
 
-  emit_column(s, s->token.column_num);
+  column_num = s->token.column_num;
 
   switch(s->token.val) {
     case TOK_NUMBER:
@@ -4593,6 +4593,10 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
   }
 
   optional_chaining_label = -1;
+  if (call_type != FUNC_CALL_NEW) {
+    column_num = s->token.column_num;
+  }
+
   for(;;) {
     JSFunctionDef *fd = s->cur_func;
     BOOL has_optional_chain = FALSE;
@@ -4862,6 +4866,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
             break;
         }
       }
+      
+      emit_column(s, column_num);
       call_type = FUNC_CALL_NORMAL;
     } else if (s->token.val == '.') {
       if (next_token(s))
@@ -4924,8 +4930,11 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       break;
     }
   }
-  if (optional_chaining_label >= 0)
+
+  if (optional_chaining_label >= 0) {
     emit_label(s, optional_chaining_label);
+  }
+
   return 0;
 }
 
@@ -6274,8 +6283,6 @@ static __exception int js_parse_statement_or_decl(JSParseState *s, int decl_mask
   JSAtom label_name;
   int tok;
 
-  emit_column(s, s->token.column_num);
-
   /* specific label handling */
   /* XXX: support multiple labels on loop statements */
   label_name = JS_ATOM_NULL;
@@ -6319,6 +6326,7 @@ static __exception int js_parse_statement_or_decl(JSParseState *s, int decl_mask
     }
   }
 
+  emit_column(s, s->token.column_num);
   switch(tok = s->token.val) {
     case '{':
       if (js_parse_block(s))
@@ -9549,14 +9557,17 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
         goto no_change;
 
       case OP_column_num:
-        while(bc_buf[pos_next] == OP_column_num) {
+        column_num = get_u32(bc_buf + pos + 1);
+        while(
+          bc_buf[pos_next] == OP_column_num 
+          && column_num == get_u32(bc_buf + pos_next + 1)
+        ) {
           pos = pos_next;
           op = bc_buf[pos];
           len = opcode_info[op].size;
           pos_next = pos + len;
         }
-        
-        column_num = get_u32(bc_buf + pos + 1);
+
         s->column_number_size++;
         goto no_change;
 

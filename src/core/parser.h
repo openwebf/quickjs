@@ -365,6 +365,7 @@ typedef struct JSParseState {
   JSContext *ctx;
   int last_line_num;  /* line number of last token */
   int line_num;       /* line number of current offset */
+  int prev_column_num; /* column num for parse error */
   const uint8_t *column_ptr; /* column head pointer on every line */
   const uint8_t *column_last_ptr;
   const char *filename;

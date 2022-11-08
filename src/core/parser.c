@@ -143,7 +143,7 @@ int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const 
     backtrace_flags = JS_BACKTRACE_FLAG_SINGLE_LEVEL;
   build_backtrace(ctx, ctx->rt->current_exception, 
                   s->filename, s->line_num,
-                  s->column_last_ptr - s->column_ptr, 
+                  s->prev_column_num, 
                   backtrace_flags);
   return -1;
 }
@@ -582,6 +582,7 @@ static __exception int next_token(JSParseState *s)
   p = s->last_ptr = s->buf_ptr;
   s->got_lf = FALSE;
   s->last_line_num = s->token.line_num;
+  s->prev_column_num = s->column_last_ptr - s->column_ptr;
 redo:
   s->column_last_ptr = p;
   s->token.line_num = s->line_num;
@@ -1074,7 +1075,7 @@ redo:
       break;
   }
   
-  s->column_last_ptr = s->buf_ptr = p;
+  s->buf_ptr = p;
   if(!s->token.column_num && s->column_last_ptr > s->column_ptr) {
     s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
@@ -1309,7 +1310,7 @@ redo:
       break;
   }
 
-  s->column_last_ptr = s->buf_ptr = p;
+  s->buf_ptr = p;
   if(!s->token.column_num && s->column_last_ptr > s->column_ptr){
     s->token.column_num = s->column_last_ptr - s->column_ptr;
   }
@@ -2735,6 +2736,7 @@ static __exception int js_parse_class_default_ctor(JSParseState *s,
   saved_buf_end = s->buf_end;
   s->buf_ptr = (uint8_t *)str;
   s->buf_end = (uint8_t *)(str + strlen(str));
+  s->column_last_ptr = s->buf_ptr;
   ret = next_token(s);
   if (!ret) {
     ret = js_parse_function_decl2(s, func_type, JS_FUNC_NORMAL,
@@ -4282,8 +4284,10 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
   int optional_chaining_label, column_num;
   BOOL accept_lparen = (parse_flags & PF_POSTFIX_CALL) != 0;
   call_type = FUNC_CALL_NORMAL;
-  column_num = s->token.column_num;
   
+  column_num = s->token.column_num;
+  emit_column(s, column_num);
+
   switch(s->token.val) {
     case TOK_NUMBER:
     {
@@ -4506,7 +4510,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       if (next_token(s))
         return -1;
       if (s->token.val == '.') {
-        emit_column(s, s->token.column_num);
         if (next_token(s))
           return -1;
 
@@ -4541,7 +4544,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
           return js_parse_error(s, "super() is only valid in a derived class constructor");
         call_type = FUNC_CALL_SUPER_CTOR;
       } else if (s->token.val == '.' || s->token.val == '[') {
-        emit_column(s, s->token.column_num);
         if (!s->cur_func->super_allowed)
           return js_parse_error(s, "'super' is only valid in a method");
         emit_op(s, OP_scope_get_var);
@@ -4560,7 +4562,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
         return -1;
 
       if (s->token.val == '.') {
-        emit_column(s, s->token.column_num);
         if (next_token(s))
           return -1;
         if (!token_is_pseudo_keyword(s, JS_ATOM_meta))
@@ -4589,7 +4590,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
   }
 
   optional_chaining_label = -1;
-  column_num = s->token.column_num;
   for(;;) {
     JSFunctionDef *fd = s->cur_func;
     BOOL has_optional_chain = FALSE;
@@ -4719,6 +4719,12 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
         if (js_parse_expect(s, ','))
           return -1;
       }
+      
+      /** new expr should location at 'new' keywords */
+      if (call_type == FUNC_CALL_NEW) {
+        emit_column(s, column_num);
+      }
+
       if (s->token.val == TOK_ELLIPSIS) {
         emit_op(s, OP_array_from);
         emit_u16(s, arg_count);
@@ -4859,13 +4865,12 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
             break;
         }
       }
-      
-      emit_column(s, column_num);
       call_type = FUNC_CALL_NORMAL;
     } else if (s->token.val == '.') {
-      emit_column(s, s->token.column_num);
       if (next_token(s))
         return -1;
+    
+    emit_column(s,  s->token.column_num);
     parse_property:
       if (s->token.val == TOK_PRIVATE_NAME) {
         /* private class field */
@@ -4912,7 +4917,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       if (next_token(s))
         return -1;
       
-      column_num = s->token.column_num;
       if (js_parse_expr(s))
         return -1;
       if (js_parse_expect(s, ']'))
@@ -4940,6 +4944,8 @@ static __exception int js_parse_delete(JSParseState *s)
   JSAtom name;
   int opcode;
 
+  emit_column(s, s->token.column_num);
+  
   if (next_token(s))
     return -1;
   if (js_parse_unary(s, PF_POW_FORBIDDEN))
@@ -5295,8 +5301,6 @@ static __exception int js_parse_logical_and_or(JSParseState *s, int op,
 {
   int label1;
 
-  emit_column(s, s->token.column_num);
-
   if (op == TOK_LAND) {
     if (js_parse_expr_binary(s, 8, parse_flags))
       return -1;
@@ -5315,6 +5319,7 @@ static __exception int js_parse_logical_and_or(JSParseState *s, int op,
       emit_op(s, OP_drop);
 
       if (op == TOK_LAND) {
+        emit_column(s, s->token.column_num);
         if (js_parse_expr_binary(s, 8, parse_flags & ~PF_ARROW_FUNC))
           return -1;
       } else {
@@ -5334,11 +5339,10 @@ static __exception int js_parse_logical_and_or(JSParseState *s, int op,
   return 0;
 }
 
+/** parse (expr ? expr : expr) and (expr ?? expr) or something */
 static __exception int js_parse_coalesce_expr(JSParseState *s, int parse_flags)
 {
   int label1;
-
-  emit_column(s, s->token.column_num);
 
   if (js_parse_logical_and_or(s, TOK_LOR, parse_flags))
     return -1;
@@ -5353,6 +5357,7 @@ static __exception int js_parse_coalesce_expr(JSParseState *s, int parse_flags)
       emit_goto(s, OP_if_false, label1);
       emit_op(s, OP_drop);
 
+      emit_column(s, s->token.column_num);
       if (js_parse_expr_binary(s, 8, parse_flags & ~PF_ARROW_FUNC))
         return -1;
       if (s->token.val != TOK_DOUBLE_QUESTION_MARK)
@@ -5367,8 +5372,6 @@ static __exception int js_parse_coalesce_expr(JSParseState *s, int parse_flags)
 static __exception int js_parse_cond_expr(JSParseState *s, int parse_flags)
 {
   int label1, label2;
-
-  emit_column(s, s->token.column_num);
 
   if (js_parse_coalesce_expr(s, parse_flags))
     return -1;
@@ -9555,7 +9558,6 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 
         s->column_number_size++;
         goto no_change;
-
       case OP_eval: /* convert scope index to adjusted variable index */
       {
         int call_argc = get_u16(bc_buf + pos + 1);

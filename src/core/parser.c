@@ -1498,7 +1498,6 @@ static void emit_atom(JSParseState *s, JSAtom name)
 static void emit_column(JSParseState *s, int column_num) {
   emit_u8(s, OP_column_num);
   emit_u32(s, column_num);
-  // printf("line: %d, column: %d\n", s->line_num, column_num);
 }
 
 static int update_label(JSFunctionDef *s, int label, int delta)
@@ -4720,8 +4719,6 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
         if (js_parse_expect(s, ','))
           return -1;
       }
-      
-      emit_column(s, column_num);
 
       if (s->token.val == TOK_ELLIPSIS) {
         emit_op(s, OP_array_from);
@@ -4824,6 +4821,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
             break;
         }
       } else {
+        emit_column(s, column_num);
         if (next_token(s))
           return -1;
       emit_func_call:
@@ -9554,7 +9552,7 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
           len = opcode_info[op].size;
           pos_next = pos + len;
         }
-
+        
         s->column_number_size++;
         goto no_change;
       case OP_eval: /* convert scope index to adjusted variable index */
@@ -10265,16 +10263,20 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
       case OP_call_method:
       {
         /* detect and transform tail calls */
-        int argc;
-        argc = get_u16(bc_buf + pos + 1);
+        int argc = get_u16(bc_buf + pos + 1);
+        s->column_number_size++;
+
         if (code_match(&cc, pos_next, OP_return, -1)) {
           if (cc.line_num >= 0) line_num = cc.line_num;
           add_pc2line_info(s, bc_out.size, line_num);
+          add_pc2col_info(s, bc_out.size, column_num);
           put_short_code(&bc_out, op + 1, argc);
           pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
           break;
         }
+
         add_pc2line_info(s, bc_out.size, line_num);
+        add_pc2col_info(s, bc_out.size, column_num);
         put_short_code(&bc_out, op, argc);
         break;
       }

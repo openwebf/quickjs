@@ -7,7 +7,7 @@ quickjs
 
 In addition to the relevant features and optimizations in the [TODO](https://github.com/openwebf/quickjs/blob/master/TODO) file, the more important optimizations are:
 
-- [x] Column support
+- [x] Column number
 - [ ] Debugger API
 - [ ] Inline cache
 

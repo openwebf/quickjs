@@ -73,8 +73,6 @@ void dbuf_put_leb128(DynBuf* s, uint32_t v) {
   }
 }
 
-
-
 void dbuf_put_sleb128(DynBuf* s, int32_t v1) {
   uint32_t v = v1;
   dbuf_put_leb128(s, (2 * v) ^ -(v >> 31));
@@ -120,9 +118,9 @@ int find_line_num(JSContext* ctx, JSFunctionBytecode* b, uint32_t pc_value) {
     return -1;
   }
 
+  pc = 0;
   p = b->debug.pc2line_buf;
   p_end = p + b->debug.pc2line_len;
-  pc = 0;
   line_num = b->debug.line_num;
   while (p < p_end) {
     op = *p++;
@@ -146,11 +144,62 @@ int find_line_num(JSContext* ctx, JSFunctionBytecode* b, uint32_t pc_value) {
       pc += (op / PC2LINE_RANGE);
       new_line_num = line_num + (op % PC2LINE_RANGE) + PC2LINE_BASE;
     }
-    if (pc_value < pc)
+
+    if (pc_value < pc) {
       return line_num;
+    }
+
     line_num = new_line_num;
   }
+
   return line_num;
+}
+
+int find_column_num(JSContext* ctx, JSFunctionBytecode* b, uint32_t pc_value) {
+  const uint8_t* p_end, *p;
+  int new_column_num, column_num, pc, v, ret;
+  unsigned int op;
+
+  if (!b->has_debug || !b->debug.pc2column_buf) {
+    /* function was stripped */
+    return -1;
+  }
+
+  pc = 0;
+  p = b->debug.pc2column_buf;
+  p_end = p + b->debug.pc2column_len;
+  column_num = b->debug.column_num;
+  while (p < p_end) {
+    op = *p++;
+    if (op == 0) {
+      uint32_t val;
+      ret = get_leb128(&val, p, p_end);
+      if (ret < 0)
+        goto fail;
+      pc += val;
+      p += ret;
+      ret = get_sleb128(&v, p, p_end);
+      if (ret < 0) {
+      fail:
+        /* should never happen */
+        return b->debug.column_num;
+      }
+      p += ret;
+      new_column_num = column_num + v;
+    } else {
+      op -= PC2COLUMN_OP_FIRST;
+      pc += (op / PC2COLUMN_RANGE);
+      new_column_num = column_num + (op % PC2COLUMN_RANGE) + PC2COLUMN_BASE;
+    }
+
+    if (pc_value < pc) {
+      return column_num;
+    }
+
+    column_num = new_column_num;
+  }
+
+  return column_num;
 }
 
 int js_update_property_flags(JSContext* ctx, JSObject* p, JSShapeProperty** pprs, int flags) {
@@ -1080,7 +1129,7 @@ const char* get_func_name(JSContext* ctx, JSValueConst func) {
 
 /* if filename != NULL, an additional level is added with the filename
    and line number information (used for parse error). */
-void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filename, int line_num, int backtrace_flags) {
+void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filename, int line_num, int column_num, int backtrace_flags) {
   JSStackFrame* sf;
   JSValue str;
   DynBuf dbuf;
@@ -1092,15 +1141,21 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
   js_dbuf_init(ctx, &dbuf);
   if (filename) {
     dbuf_printf(&dbuf, "    at %s", filename);
-    if (line_num != -1)
+    if (line_num != -1) {
       dbuf_printf(&dbuf, ":%d", line_num);
+    }
+
+    if (column_num != -1) {
+      dbuf_printf(&dbuf, ":%d", column_num);
+    }
+
     dbuf_putc(&dbuf, '\n');
     str = JS_NewString(ctx, filename);
     JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     if (backtrace_flags & JS_BACKTRACE_FLAG_SINGLE_LEVEL)
       goto done;
   }
+
   for (sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
     if (backtrace_flags & JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL) {
       backtrace_flags &= ~JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL;
@@ -1119,35 +1174,50 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
     if (js_class_has_bytecode(p->class_id)) {
       JSFunctionBytecode* b;
       const char* atom_str;
-      int line_num1;
 
       b = p->u.func.function_bytecode;
       backtrace_barrier = b->backtrace_barrier;
       if (b->has_debug) {
-        line_num1 = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
+        /* find line and column, default to 1:1 */
+        line_num = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
+        line_num = line_num == -1 ? 1 : line_num;
+        column_num = find_column_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
+        column_num = column_num == -1 ? 1 : column_num + 1;
         atom_str = JS_AtomToCString(ctx, b->debug.filename);
         dbuf_printf(&dbuf, " (%s", atom_str ? atom_str : "<null>");
         JS_FreeCString(ctx, atom_str);
-        if (line_num1 != -1)
-          dbuf_printf(&dbuf, ":%d", line_num1);
+        if (line_num != -1){
+          dbuf_printf(&dbuf, ":%d", line_num);
+        }
+
+        if (column_num != -1){
+          dbuf_printf(&dbuf, ":%d", column_num);
+        }
+
         dbuf_putc(&dbuf, ')');
       }
     } else {
       dbuf_printf(&dbuf, " (native)");
     }
+
     dbuf_putc(&dbuf, '\n');
     /* stop backtrace if JS_EVAL_FLAG_BACKTRACE_BARRIER was used */
     if (backtrace_barrier)
       break;
   }
+
 done:
   dbuf_putc(&dbuf, '\0');
-  if (dbuf_error(&dbuf))
+  if (dbuf_error(&dbuf)) {
     str = JS_NULL;
-  else
+  } else {
     str = JS_NewString(ctx, (char*)dbuf.buf);
+  }
+
   dbuf_free(&dbuf);
   JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+  JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+  JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, column_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 }
 
 /* Note: it is important that no exception is returned by this function */
@@ -1470,7 +1540,7 @@ JSValue js_error_constructor(JSContext* ctx, JSValueConst new_target, int argc, 
   }
 
   /* skip the Error() function in the backtrace */
-  build_backtrace(ctx, obj, NULL, 0, JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL);
+  build_backtrace(ctx, obj, NULL, 0, 0, JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL);
   return obj;
 exception:
   JS_FreeValue(ctx, obj);
@@ -2042,6 +2112,7 @@ static const JSCFunctionListEntry js_function_proto_funcs[] = {
     JS_CFUNC_DEF("[Symbol.hasInstance]", 1, js_function_hasInstance),
     JS_CGETSET_DEF("fileName", js_function_proto_fileName, NULL),
     JS_CGETSET_DEF("lineNumber", js_function_proto_lineNumber, NULL),
+    JS_CGETSET_DEF("columnNumber", js_function_proto_columnNumber, NULL),
 };
 
 /* Array */

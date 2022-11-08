@@ -38,7 +38,7 @@
 #include <malloc.h>
 #endif
 
-#include "cutils.h"
+#include "include/quickjs/cutils.h"
 #include "quickjs-libc.h"
 
 extern const uint8_t qjsc_repl[];

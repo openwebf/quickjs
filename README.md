@@ -1,7 +1,17 @@
 quickjs
 ---
 
-> optimized quickjs mantained by OpenWebF team.
+> Optimized quickjs mantained by OpenWebF team.
+
+### Optimize
+
+In addition to the relevant features and optimizations in the [TODO](https://github.com/openwebf/quickjs/blob/master/TODO) file, the more important optimizations are:
+
+- [x] Column support
+- [ ] Debugger API
+- [ ] Inline cache
+
+In our plan, we first complete the above optimization and then gradually add the remaining parts.
 
 ### How To Build
 
@@ -11,7 +21,7 @@ quickjs
 > cmake .. && make -j4
 ```
 
-you can find `libquickjs.a` in lib dictory and `qjs` / `qjsc` / `run-test262` in bin dictory.
+you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in bin folder.
 
 
 ### How To Run Test262

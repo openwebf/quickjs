@@ -143,7 +143,7 @@ int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const 
     backtrace_flags = JS_BACKTRACE_FLAG_SINGLE_LEVEL;
   build_backtrace(ctx, ctx->rt->current_exception, 
                   s->filename, s->line_num,
-                  s->prev_column_num, 
+                  s->column_last_ptr - s->column_ptr, 
                   backtrace_flags);
   return -1;
 }
@@ -582,7 +582,6 @@ static __exception int next_token(JSParseState *s)
   p = s->last_ptr = s->buf_ptr;
   s->got_lf = FALSE;
   s->last_line_num = s->token.line_num;
-  s->prev_column_num = s->column_last_ptr - s->column_ptr;
 redo:
   s->column_last_ptr = p;
   s->token.line_num = s->line_num;

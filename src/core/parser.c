@@ -141,9 +141,11 @@ int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const 
   backtrace_flags = 0;
   if (s->cur_func && s->cur_func->backtrace_barrier)
     backtrace_flags = JS_BACKTRACE_FLAG_SINGLE_LEVEL;
+
+  int column_num = s->column_last_ptr - s->column_ptr;
   build_backtrace(ctx, ctx->rt->current_exception, 
                   s->filename, s->line_num,
-                  s->column_last_ptr - s->column_ptr, 
+                  column_num < 0 ? -1 : column_num, 
                   backtrace_flags);
   return -1;
 }
@@ -4719,10 +4721,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
           return -1;
       }
       
-      /** new expr should location at 'new' keywords */
-      if (call_type == FUNC_CALL_NEW) {
-        emit_column(s, column_num);
-      }
+      emit_column(s, column_num);
 
       if (s->token.val == TOK_ELLIPSIS) {
         emit_op(s, OP_array_from);
@@ -4869,7 +4868,8 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
       if (next_token(s))
         return -1;
     
-    emit_column(s,  s->token.column_num);
+    column_num = s->token.column_num;
+    emit_column(s, column_num);
     parse_property:
       if (s->token.val == TOK_PRIVATE_NAME) {
         /* private class field */

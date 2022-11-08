@@ -3,7 +3,7 @@ quickjs
 
 > Optimized quickjs mantained by OpenWebF team.
 
-### Optimize
+### Optimizations
 
 In addition to the relevant features and optimizations in the [TODO](https://github.com/openwebf/quickjs/blob/master/TODO) file, the more important optimizations are:
 
@@ -11,7 +11,7 @@ In addition to the relevant features and optimizations in the [TODO](https://git
 - [ ] Debugger API
 - [ ] Inline cache
 
-In our plan, we first complete the above optimization and then gradually add the remaining parts.
+In our plan, we first complete the above optimizations and then gradually add the remaining parts.
 
 ### How To Build
 
@@ -35,7 +35,7 @@ you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in 
 > ./bin/run-test262 -m -c test262.conf -a
 ```
 
-it will output result like:
+It will output result like:
 ```
 Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 ```

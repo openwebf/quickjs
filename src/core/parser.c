@@ -10264,8 +10264,6 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
       {
         /* detect and transform tail calls */
         int argc = get_u16(bc_buf + pos + 1);
-        s->column_number_size++;
-
         if (code_match(&cc, pos_next, OP_return, -1)) {
           if (cc.line_num >= 0) line_num = cc.line_num;
           add_pc2line_info(s, bc_out.size, line_num);

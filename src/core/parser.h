@@ -319,6 +319,7 @@ typedef struct JSFunctionDef {
   int column_number_size;
   int column_number_count;
   int column_number_last_pc;
+  int column_number_last;
 
   /* pc2line table */
   JSAtom filename;

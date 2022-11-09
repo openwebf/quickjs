@@ -1180,18 +1180,17 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
       if (b->has_debug) {
         /* find line and column, default to 1:1 */
         line_num = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
-        line_num = line_num == -1 ? 1 : line_num;
+        line_num = line_num == -1 ? b->debug.line_num : line_num;
         column_num = find_column_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
-        column_num = column_num == -1 ? 1 : column_num + 1;
+        column_num = column_num == -1 ? b->debug.column_num : column_num + 1;
         atom_str = JS_AtomToCString(ctx, b->debug.filename);
         dbuf_printf(&dbuf, " (%s", atom_str ? atom_str : "<null>");
         JS_FreeCString(ctx, atom_str);
-        if (line_num != -1){
+        if (line_num != -1) {
           dbuf_printf(&dbuf, ":%d", line_num);
-        }
-
-        if (column_num != -1){
-          dbuf_printf(&dbuf, ":%d", column_num);
+          if (column_num != -1) {
+            dbuf_printf(&dbuf, ":%d", column_num);
+          }
         }
 
         dbuf_putc(&dbuf, ')');
@@ -1216,8 +1215,13 @@ done:
 
   dbuf_free(&dbuf);
   JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-  JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-  JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, column_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+
+  if (line_num != -1) {
+    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    if (column_num != -1) {
+      JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, column_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    }
+  }
 }
 
 /* Note: it is important that no exception is returned by this function */

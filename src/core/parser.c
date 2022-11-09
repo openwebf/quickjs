@@ -9543,16 +9543,6 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 
       case OP_column_num:
         column_num = get_u32(bc_buf + pos + 1);
-        while(
-          bc_buf[pos_next] == OP_column_num 
-          && column_num == get_u32(bc_buf + pos_next + 1)
-        ) {
-          pos = pos_next;
-          op = bc_buf[pos];
-          len = opcode_info[op].size;
-          pos_next = pos + len;
-        }
-        
         s->column_number_size++;
         goto no_change;
       case OP_eval: /* convert scope index to adjusted variable index */
@@ -9861,11 +9851,13 @@ static void add_pc2col_info(JSFunctionDef *s, uint32_t pc, int column_num)
 {
   if(s->column_number_slots != NULL
      &&  s->column_number_count < s->column_number_size
-     &&  pc >= s->column_number_last_pc) {
+     &&  pc >= s->column_number_last_pc
+     &&  column_num != s->column_number_last) {
     s->column_number_slots[s->column_number_count].pc = pc;
     s->column_number_slots[s->column_number_count].column_num = column_num;
     s->column_number_count++;
     s->column_number_last_pc = pc;
+    s->column_number_last = column_num;
   }
 }
 
@@ -10149,6 +10141,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     s->column_number_slots = js_mallocz(s->ctx, sizeof(*s->column_number_slots) * s->column_number_size);
     if(s->column_number_slots == NULL)
       return -1;
+    s->column_number_last = s->column_num;
     s->column_number_last_pc = 0;
   }
 

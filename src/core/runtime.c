@@ -1178,11 +1178,14 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
       b = p->u.func.function_bytecode;
       backtrace_barrier = b->backtrace_barrier;
       if (b->has_debug) {
-        /* find line and column, default to 1:1 */
         line_num = find_line_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
-        line_num = line_num == -1 ? b->debug.line_num : line_num;
         column_num = find_column_num(ctx, b, sf->cur_pc - b->byte_code_buf - 1);
-        column_num = column_num == -1 ? b->debug.column_num : column_num + 1;
+        line_num = line_num == -1 ? b->debug.line_num : line_num;
+        column_num = column_num == -1 ? b->debug.column_num : column_num;
+        if (column_num != -1) {
+          column_num += 1;
+        }
+        
         atom_str = JS_AtomToCString(ctx, b->debug.filename);
         dbuf_printf(&dbuf, " (%s", atom_str ? atom_str : "<null>");
         JS_FreeCString(ctx, atom_str);

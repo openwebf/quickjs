@@ -1498,7 +1498,6 @@ static void emit_atom(JSParseState *s, JSAtom name)
 static void emit_column(JSParseState *s, int column_num) {
   emit_u8(s, OP_column_num);
   emit_u32(s, column_num);
-  // printf("line: %d, column: %d\n", s->line_num, column_num);
 }
 
 static int update_label(JSFunctionDef *s, int label, int delta)
@@ -10953,6 +10952,11 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             for (j = 0; j < s->line_number_count; j++) {
               if (s->line_number_slots[j].pc > pos)
                 s->line_number_slots[j].pc -= delta;
+            }
+            for (j = 0; j < s->column_number_count; j++) {
+              if (s->column_number_slots[j].pc > pos) {
+                s->column_number_slots[j].pc -= delta;
+              }
             }
             continue;
           }

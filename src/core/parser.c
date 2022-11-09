@@ -10956,6 +10956,11 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
               if (s->line_number_slots[j].pc > pos)
                 s->line_number_slots[j].pc -= delta;
             }
+            for (j = 0; j < s->column_number_count; j++) {
+              if (s->column_number_slots[j].pc > pos) {
+                s->column_number_slots[j].pc -= delta;
+              }
+            }
             continue;
           }
           break;

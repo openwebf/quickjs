@@ -10264,19 +10264,15 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
       {
         /* detect and transform tail calls */
         int argc = get_u16(bc_buf + pos + 1);
-        s->column_number_size++;
-
         if (code_match(&cc, pos_next, OP_return, -1)) {
           if (cc.line_num >= 0) line_num = cc.line_num;
           add_pc2line_info(s, bc_out.size, line_num);
-          add_pc2col_info(s, bc_out.size, column_num);
           put_short_code(&bc_out, op + 1, argc);
           pos_next = skip_dead_code(s, bc_buf, bc_len, cc.pos, &line_num);
           break;
         }
 
         add_pc2line_info(s, bc_out.size, line_num);
-        add_pc2col_info(s, bc_out.size, column_num);
         put_short_code(&bc_out, op, argc);
         break;
       }
@@ -10955,6 +10951,11 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
             for (j = 0; j < s->line_number_count; j++) {
               if (s->line_number_slots[j].pc > pos)
                 s->line_number_slots[j].pc -= delta;
+            }
+            for (j = 0; j < s->column_number_count; j++) {
+              if (s->column_number_slots[j].pc > pos) {
+                s->column_number_slots[j].pc -= delta;
+              }
             }
             continue;
           }

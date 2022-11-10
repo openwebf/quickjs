@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [master]
 jobs:
-  test:
+  test262:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install -y libcppunit-dev cmake

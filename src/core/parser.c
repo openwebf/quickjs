@@ -129,6 +129,15 @@ static void __attribute((unused)) dump_token(JSParseState *s,
   }
 }
 
+static int calc_column_position(JSParseState *s) {
+  if(s->column_last_ptr > s->column_ptr) {
+    s->column_num_count += utf8_str_len(s->column_ptr, s->column_last_ptr);
+    s->column_ptr = s->column_last_ptr;
+  }
+
+  return s->column_num_count;
+}
+
 int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const char *fmt, ...)
 {
   JSContext *ctx = s->ctx;
@@ -142,7 +151,7 @@ int __attribute__((format(printf, 2, 3))) js_parse_error(JSParseState *s, const 
   if (s->cur_func && s->cur_func->backtrace_barrier)
     backtrace_flags = JS_BACKTRACE_FLAG_SINGLE_LEVEL;
 
-  int column_num = s->column_last_ptr - s->column_ptr;
+  int column_num = calc_column_position(s);
   build_backtrace(ctx, ctx->rt->current_exception, 
                   s->filename, s->line_num,
                   column_num < 0 ? -1 : column_num, 
@@ -183,7 +192,7 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
 {
   uint32_t c;
   StringBuffer b_s, *b = &b_s;
-  s->token.column_num = s->column_last_ptr - s->column_ptr;
+  s->token.column_num = calc_column_position(s);
 
   /* p points to the first byte of the template part */
   if (string_buffer_init(s->ctx, b, 32))
@@ -216,8 +225,8 @@ static __exception int js_parse_template_part(JSParseState *s, const uint8_t *p)
     }
     if (c == '\n') {
       s->line_num++;
-      s->column_last_ptr = p;
-      s->column_ptr = p;
+      s->column_ptr = s->column_last_ptr = p;
+      s->column_num_count = 0;
     } else if (c >= 0x80) {
       const uint8_t *p_next;
       c = unicode_from_utf8(p - 1, UTF8_CHAR_LEN_MAX, &p_next);
@@ -251,7 +260,7 @@ static __exception int js_parse_string(JSParseState *s, int sep,
   int ret;
   uint32_t c;
   StringBuffer b_s, *b = &b_s;
-  s->token.column_num = s->column_last_ptr - s->column_ptr;
+  s->token.column_num = calc_column_position(s);
 
   /* string */
   if (string_buffer_init(s->ctx, b, 32))
@@ -309,8 +318,8 @@ static __exception int js_parse_string(JSParseState *s, int sep,
           p++;
           if (sep != '`') {
             s->line_num++;
-            s->column_last_ptr = p;
-            s->column_ptr = p;
+            s->column_ptr = s->column_last_ptr = p;
+            s->column_num_count = 0;
           }
           continue;
         default:
@@ -567,7 +576,6 @@ done:
   return atom;
 }
 
-
 static __exception int next_token(JSParseState *s)
 {
   const uint8_t *p;
@@ -619,6 +627,7 @@ redo:
       s->got_lf = TRUE;
       s->line_num++;
       s->column_ptr = p;
+      s->column_num_count = 0;
       goto redo;
     case '\f':
     case '\v':
@@ -643,6 +652,7 @@ redo:
             s->line_num++;
             s->got_lf = TRUE; /* considered as LF for ASI */
             s->column_ptr = ++p;
+            s->column_num_count = 0;
           } else if (*p == '\r') {
             s->got_lf = TRUE; /* considered as LF for ASI */
             p++;
@@ -1077,8 +1087,8 @@ redo:
   }
   
   s->buf_ptr = p;
-  if(!s->token.column_num && s->column_last_ptr > s->column_ptr) {
-    s->token.column_num = s->column_last_ptr - s->column_ptr;
+  if (!s->token.column_num) {
+    s->token.column_num = calc_column_position(s);
   }
 
   // dump_token(s, &s->token);
@@ -1170,6 +1180,7 @@ redo:
       p++;
       s->line_num++;
       s->column_ptr = p;
+      s->column_num_count = 0;
       goto redo;
     case '\f':
     case '\v':
@@ -1202,6 +1213,7 @@ redo:
           if (*p == '\n') {
             s->line_num++;
             s->column_ptr = ++p;
+            s->column_num_count = 0;
           } else if (*p == '\r') {
             p++;
           } else if (*p >= 0x80) {
@@ -1312,8 +1324,8 @@ redo:
   }
 
   s->buf_ptr = p;
-  if(!s->token.column_num && s->column_last_ptr > s->column_ptr){
-    s->token.column_num = s->column_last_ptr - s->column_ptr;
+  if (!s->token.column_num) {
+    s->token.column_num = calc_column_position(s);
   }
 
   // dump_token(s, &s->token);
@@ -2354,16 +2366,20 @@ fail:
 typedef struct JSParsePos {
   int last_line_num;
   int line_num;
-  int column_num;
   BOOL got_lf;
   const uint8_t *ptr;
+  const uint8_t *column_ptr;
+  const uint8_t *column_last_ptr;
+  int column_num_count;
 } JSParsePos;
 
 static int js_parse_get_pos(JSParseState *s, JSParsePos *sp)
 {
   sp->last_line_num = s->last_line_num;
   sp->line_num = s->token.line_num;
-  sp->column_num = s->token.column_num;
+  sp->column_ptr = s->column_ptr;
+  sp->column_last_ptr = s->column_last_ptr;
+  sp->column_num_count = s->column_num_count;
   sp->ptr = s->token.ptr;
   sp->got_lf = s->got_lf;
   return 0;
@@ -2373,7 +2389,9 @@ static __exception int js_parse_seek_token(JSParseState *s, const JSParsePos *sp
 {
   s->token.line_num = sp->last_line_num;
   s->line_num = sp->line_num;
-  s->column_last_ptr = sp->ptr;
+  s->column_ptr = sp->column_ptr;
+  s->column_last_ptr = sp->column_last_ptr;
+  s->column_num_count = sp->column_num_count;
   s->buf_ptr = sp->ptr;
   s->got_lf = sp->got_lf;
   return next_token(s);
@@ -9543,16 +9561,6 @@ static __exception int resolve_variables(JSContext *ctx, JSFunctionDef *s)
 
       case OP_column_num:
         column_num = get_u32(bc_buf + pos + 1);
-        while(
-          bc_buf[pos_next] == OP_column_num 
-          && column_num == get_u32(bc_buf + pos_next + 1)
-        ) {
-          pos = pos_next;
-          op = bc_buf[pos];
-          len = opcode_info[op].size;
-          pos_next = pos + len;
-        }
-        
         s->column_number_size++;
         goto no_change;
       case OP_eval: /* convert scope index to adjusted variable index */
@@ -9861,11 +9869,13 @@ static void add_pc2col_info(JSFunctionDef *s, uint32_t pc, int column_num)
 {
   if(s->column_number_slots != NULL
      &&  s->column_number_count < s->column_number_size
-     &&  pc >= s->column_number_last_pc) {
+     &&  pc >= s->column_number_last_pc
+     &&  column_num != s->column_number_last) {
     s->column_number_slots[s->column_number_count].pc = pc;
     s->column_number_slots[s->column_number_count].column_num = column_num;
     s->column_number_count++;
     s->column_number_last_pc = pc;
+    s->column_number_last = column_num;
   }
 }
 
@@ -10149,6 +10159,7 @@ static __exception int resolve_labels(JSContext *ctx, JSFunctionDef *s)
     s->column_number_slots = js_mallocz(s->ctx, sizeof(*s->column_number_slots) * s->column_number_size);
     if(s->column_number_slots == NULL)
       return -1;
+    s->column_number_last = s->column_num;
     s->column_number_last_pc = 0;
   }
 
@@ -12266,6 +12277,8 @@ void js_parse_init(JSContext *ctx, JSParseState *s,
   s->filename = filename;
   s->line_num = 1;
   s->column_ptr = (const uint8_t*)input;
+  s->column_last_ptr = s->column_ptr;
+  s->column_num_count = 0;
   s->buf_ptr = (const uint8_t *)input;
   s->buf_end = s->buf_ptr + input_len;
   s->token.val = ' ';

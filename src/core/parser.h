@@ -319,6 +319,7 @@ typedef struct JSFunctionDef {
   int column_number_size;
   int column_number_count;
   int column_number_last_pc;
+  int column_number_last;
 
   /* pc2line table */
   JSAtom filename;
@@ -367,6 +368,7 @@ typedef struct JSParseState {
   int line_num;       /* line number of current offset */
   const uint8_t *column_ptr; /* column head pointer on every line */
   const uint8_t *column_last_ptr;
+  int column_num_count;
   const char *filename;
   JSToken token;
   BOOL got_lf; /* true if got line feed before the current token */

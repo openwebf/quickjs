@@ -1137,15 +1137,19 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
   const char* str1;
   JSObject* p;
   BOOL backtrace_barrier;
+  int latest_line_num = -1;
+  int latest_column_num = -1;
 
   js_dbuf_init(ctx, &dbuf);
   if (filename) {
     dbuf_printf(&dbuf, "    at %s", filename);
     if (line_num != -1) {
+      latest_line_num = line_num;
       dbuf_printf(&dbuf, ":%d", line_num);
     }
 
     if (column_num != -1) {
+      latest_column_num = column_num;
       dbuf_printf(&dbuf, ":%d", column_num);
     }
 
@@ -1186,6 +1190,14 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
           column_num += 1;
         }
         
+        if (latest_line_num == -1) {
+          latest_line_num = line_num;
+        }
+
+        if (latest_column_num == -1) {
+          latest_column_num = column_num;
+        }
+
         atom_str = JS_AtomToCString(ctx, b->debug.filename);
         dbuf_printf(&dbuf, " (%s", atom_str ? atom_str : "<null>");
         JS_FreeCString(ctx, atom_str);
@@ -1220,9 +1232,22 @@ done:
   JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
 
   if (line_num != -1) {
-    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, line_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+    JS_DefinePropertyValue(
+      ctx, 
+      error_obj, 
+      JS_ATOM_lineNumber, 
+      JS_NewInt32(ctx, latest_line_num), 
+      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE
+    );
+
     if (column_num != -1) {
-      JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_columnNumber, JS_NewInt32(ctx, column_num), JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
+      JS_DefinePropertyValue(
+        ctx, 
+        error_obj, 
+        JS_ATOM_columnNumber, 
+        JS_NewInt32(ctx, latest_column_num), 
+        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE
+      );
     }
   }
 }

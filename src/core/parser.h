@@ -368,6 +368,7 @@ typedef struct JSParseState {
   int line_num;       /* line number of current offset */
   const uint8_t *column_ptr; /* column head pointer on every line */
   const uint8_t *column_last_ptr;
+  int column_num_count;
   const char *filename;
   JSToken token;
   BOOL got_lf; /* true if got line feed before the current token */

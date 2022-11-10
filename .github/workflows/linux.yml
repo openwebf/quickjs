@@ -1,7 +1,5 @@
 name: linux-x64
 on:
-  push:
-    branches: [master]
   pull_request:
     branches: [master]
 jobs:
@@ -10,13 +8,5 @@ jobs:
     steps:
       - run: sudo apt install -y libcppunit-dev cmake
       - run: git clone https://github.com/openwebf/quickjs
-      - run: cd quickjs && mkdir build
-      - run: cd build && cmake ..
-      - run: make -j4
-      - run: cd ..
-      - run: git clone https://github.com/tc39/test262.git test262
-      - run: cd test262
-      - run: patch -p1 < ../tests/test262.patch
-      - run: cd ..
-      - run: touch test262_errors.txt
-      - run: ./bin/run-test262 -m -c test262.conf -a
+      - run: ls -lah
+      - run: cd quickjs && bash scripts/ci.sh

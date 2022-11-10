@@ -213,6 +213,16 @@ var a = \`1+1
     }
 }
 
+/** dynamic Function parse error should be located the latest token */
+function test_line_column13() {
+    try {
+        eval(`Function("===>", "a");`);
+    } catch (e) {
+        assert(e.lineNumber, 1, 'test_line_column13');
+        assert(e.columnNumber, 20, 'test_line_column13');
+    }
+}
+
 test_line_column1();
 test_line_column2();
 test_line_column3();
@@ -225,3 +235,4 @@ test_line_column9();
 test_line_column10();
 test_line_column11();
 test_line_column12();
+test_line_column13();

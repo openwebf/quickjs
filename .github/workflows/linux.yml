@@ -1,6 +1,6 @@
 name: linux-x64
 on:
-  pull_request:
+  push:
     branches: [master]
 jobs:
   test262:

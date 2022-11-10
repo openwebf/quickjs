@@ -9,7 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install -y libcppunit-dev cmake
-      - run: mkdir build
+      - run: git clone https://github.com/openwebf/quickjs
+      - run: cd quickjs && mkdir build
       - run: cd build && cmake ..
       - run: make -j4
       - run: cd ..

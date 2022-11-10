@@ -27,12 +27,7 @@ you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in 
 ### How To Run Test262
 
 ```shell
-> git clone https://github.com/tc39/test262.git test262
-> cd test262
-> patch -p1 < ../tests/test262.patch
-> cd ..
-> touch test262_errors.txt
-> ./bin/run-test262 -m -c test262.conf -a
+> bash scripts/test.sh
 ```
 
 It will output result like:

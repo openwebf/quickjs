@@ -1,6 +1,8 @@
 quickjs
 ---
 
+![linux ci](https://github.com/openwebf/quickjs/actions/workflows/linux.yml/badge.svg)
+
 > Optimized quickjs mantained by OpenWebF team.
 
 ### Optimizations

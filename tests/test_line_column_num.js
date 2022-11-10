@@ -12,7 +12,7 @@ function assert(actual, expected, message) {
         ', expected |' + expected + '|' + (message ? ' (' + message + ')' : ''));
 }
 
-/** id not exists -> should located at id */
+/** id not exists -> should be located at id */
 function test_line_column1() {
     try {
         eval(`'【';A;`);
@@ -23,7 +23,7 @@ function test_line_column1() {
 }
 
 /**
- * memeber call should locate at id:
+ * memeber call should be located at id:
  * a.b.c() and c is null -> c will be located
  */
 function test_line_column2() {
@@ -39,7 +39,7 @@ a.b.c.d();
 }
 
 /**
- * memeber call should locate at id:
+ * memeber call should be located at id:
  * a.b.c() and b is null -> c will be located
  */
 function test_line_column3() {
@@ -54,7 +54,7 @@ a.f.c.d();
     }
 }
 
-/** if id not exists -> should located at id */
+/** if id not exists -> should be located at id */
 function test_line_column4() {
     try {
         eval(`(function(){'use strict';a;}());`);
@@ -64,7 +64,7 @@ function test_line_column4() {
     }
 }
 
-/** if id not exists -> should located at id */
+/** if id not exists -> should be located at id */
 function test_line_column5() {
     try {
         eval(`'【';1+1;new A();`);
@@ -74,7 +74,7 @@ function test_line_column5() {
     }
 }
 
-/** new call should located at 'new' */
+/** new call should be located at 'new' */
 function test_line_column6() {
     try {
         eval(`'【';1+1;throw new Error();`);
@@ -85,7 +85,7 @@ function test_line_column6() {
 }
 
 /**
- * normal call should locate at function name:
+ * normal call should be located at function name:
  * a() and a is null or occur error -> a will be located
  */
 function test_line_column7() {
@@ -97,7 +97,8 @@ function test_line_column7() {
     }
 }
 
-/** if comment is first line, 
+/** 
+ * if comment is first line, 
  * the line number of one line should be locate at next line 
  */
 function test_line_column8() {

@@ -580,14 +580,14 @@ static int JS_WriteFunctionTag(BCWriterState* s, JSValueConst obj) {
     bc_put_leb128(s, b->debug.pc2line_len);
     dbuf_put(&s->dbuf, b->debug.pc2line_buf, b->debug.pc2line_len);
     /** 
-     * purely for compatibility with OpenWebF's previous compiler
+     * purely for compatibility with WebF/Kraken V1 quickjs compiler (kbc1 file format).
      * determination of whether a column number is available by 
-     * adding a special sequence of characters
+     * adding a special sequence of characters.
      */
     dbuf_putc(&s->dbuf, 255);
+    dbuf_putc(&s->dbuf, 67); // 'C'
     dbuf_putc(&s->dbuf, 79); // 'O'
-    dbuf_putc(&s->dbuf, 87); // 'W'
-    dbuf_putc(&s->dbuf, 70); // 'F'
+    dbuf_putc(&s->dbuf, 76); // 'L'
     bc_put_leb128(s, b->debug.column_num);
     bc_put_leb128(s, b->debug.pc2column_len);
     dbuf_put(&s->dbuf, b->debug.pc2column_buf, b->debug.pc2column_len);
@@ -1585,8 +1585,8 @@ static JSValue JS_ReadFunctionTag(BCReaderState* s) {
         goto fail;
     }
 
-    /** special column number check logic for OpenWebF */
-    if (s->ptr[0] == 255 && s->ptr[1] == 79 && s->ptr[2] == 87 && s->ptr[3] == 70) {
+    /** special column number check logic for V1(.kbc1 file) bytecode format. */
+    if (s->ptr[0] == 255 && s->ptr[1] == 67 && s->ptr[2] == 79 && s->ptr[3] == 76) {
       s->ptr += 4;
       if (bc_get_leb128_int(s, &b->debug.column_num)) {
         goto fail;

@@ -1,0 +1,12 @@
+name: linux-x64
+on:
+  push:
+    branches: [master]
+jobs:
+  test262:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt install -y libcppunit-dev cmake
+      - run: git clone https://github.com/openwebf/quickjs
+      - run: ls -lah
+      - run: cd quickjs && bash scripts/ci.sh

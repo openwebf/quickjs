@@ -579,6 +579,15 @@ static int JS_WriteFunctionTag(BCWriterState* s, JSValueConst obj) {
     bc_put_leb128(s, b->debug.line_num);
     bc_put_leb128(s, b->debug.pc2line_len);
     dbuf_put(&s->dbuf, b->debug.pc2line_buf, b->debug.pc2line_len);
+    /** 
+     * purely for compatibility with OpenWebF's previous compiler
+     * determination of whether a column number is available by 
+     * adding a special sequence of characters
+     */
+    dbuf_putc(&s->dbuf, 255);
+    dbuf_putc(&s->dbuf, 79); // 'O'
+    dbuf_putc(&s->dbuf, 87); // 'W'
+    dbuf_putc(&s->dbuf, 70); // 'F'
     bc_put_leb128(s, b->debug.column_num);
     bc_put_leb128(s, b->debug.pc2column_len);
     dbuf_put(&s->dbuf, b->debug.pc2column_buf, b->debug.pc2column_len);
@@ -1576,22 +1585,26 @@ static JSValue JS_ReadFunctionTag(BCReaderState* s) {
         goto fail;
     }
 
-    if (bc_get_leb128_int(s, &b->debug.column_num)) {
-      goto fail;
-    }
-
-    if (bc_get_leb128_int(s, &b->debug.pc2column_len)) {
-      goto fail;
-    }
-
-    if (b->debug.pc2column_len) {
-      b->debug.pc2column_buf = js_mallocz(ctx, b->debug.pc2column_len);
-      if (!b->debug.pc2column_buf) {
+    /** special column number check logic for OpenWebF */
+    if (s->ptr[0] == 255 && s->ptr[1] == 79 && s->ptr[2] == 87 && s->ptr[3] == 70) {
+      s->ptr += 4;
+      if (bc_get_leb128_int(s, &b->debug.column_num)) {
         goto fail;
       }
 
-      if (bc_get_buf(s, b->debug.pc2column_buf, b->debug.pc2column_len)) {
+      if (bc_get_leb128_int(s, &b->debug.pc2column_len)) {
         goto fail;
+      }
+
+      if (b->debug.pc2column_len) {
+        b->debug.pc2column_buf = js_mallocz(ctx, b->debug.pc2column_len);
+        if (!b->debug.pc2column_buf) {
+          goto fail;
+        }
+
+        if (bc_get_buf(s, b->debug.pc2column_buf, b->debug.pc2column_len)) {
+          goto fail;
+        }
       }
     }
 

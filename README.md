@@ -10,8 +10,9 @@ quickjs
 In addition to the relevant features and optimizations in the [TODO](https://github.com/openwebf/quickjs/blob/master/TODO) file, the more important optimizations are:
 
 - [x] Column number
-- [ ] Debugger API
-- [ ] Inline cache
+- [ ] Basic Debugger API
+- [ ] Poly IC
+- [ ] Tri-Color Marking GC
 
 In our plan, we first complete the above optimizations and then gradually add the remaining parts.
 

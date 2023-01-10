@@ -520,8 +520,8 @@ typedef struct InlineCacheRingItem {
 
 typedef struct InlineCacheRingSlot {
     JSAtom atom;
-    uint8_t index;
     InlineCacheRingItem buffer[IC_CACHE_ITEM_CAPACITY];
+    uint8_t index;
 } InlineCacheRingSlot;
 
 typedef struct InlineCacheHashSlot {
@@ -537,8 +537,8 @@ typedef struct InlineCache {
     JSRuntime* rt;
     InlineCacheHashSlot **hash;
     InlineCacheRingSlot *cache;
-    BOOL updated;
     uint32_t updated_offset;
+    BOOL updated;
 } InlineCache;
 
 typedef struct JSFunctionBytecode {

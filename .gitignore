@@ -3,10 +3,11 @@ bin
 .idea
 .vscode
 lib
-cmake-build-debug
+cmake-build-*
 build
 *.expand
 *.svg
 test262_errors.txt
 test262_report.txt
 test262
+perf.*

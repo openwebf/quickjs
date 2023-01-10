@@ -388,13 +388,14 @@ static int JS_AutoInitProperty(JSContext *ctx, JSObject *p, JSAtom prop,
 
 JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                JSAtom prop, JSValueConst this_obj,
-                               BOOL throw_ref_error)
+                               InlineCache *ic, BOOL throw_ref_error)
 {
   JSObject *p;
   JSProperty *pr;
   JSShapeProperty *prs;
-  uint32_t tag;
+  uint32_t tag, offset, proto_depth;
 
+  offset = proto_depth = 0;
   tag = JS_VALUE_GET_TAG(obj);
   if (unlikely(tag != JS_TAG_OBJECT)) {
     switch(tag) {
@@ -434,7 +435,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
   }
 
   for(;;) {
-    prs = find_own_property(&pr, p, prop);
+    prs = find_own_property_ic(&pr, p, prop, &offset);
     if (prs) {
       /* found */
       if (unlikely(prs->flags & JS_PROP_TMASK)) {
@@ -459,6 +460,11 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
           continue;
         }
       } else {
+        // basic poly ic is only used for fast path
+        if (ic != NULL && proto_depth == 0 && p->shape->is_hashed) {
+          ic->updated = TRUE;
+          ic->updated_offset = add_ic_slot(ic, prop, p, offset);
+        }
         return JS_DupValue(ctx, pr->u.value);
       }
     }
@@ -521,6 +527,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
         }
       }
     }
+    proto_depth += 1;
     p = p->shape->proto;
     if (!p)
       break;
@@ -530,6 +537,24 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
   } else {
     return JS_UNDEFINED;
   }
+}
+
+force_inline JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst obj,
+                               JSAtom prop, JSValueConst this_obj,
+                               InlineCache *ic, int32_t offset, 
+                               BOOL throw_ref_error) 
+{
+  uint32_t tag;
+  JSObject *p;
+  tag = JS_VALUE_GET_TAG(obj);
+  if (unlikely(tag != JS_TAG_OBJECT))
+    goto slow_path;
+  p = JS_VALUE_GET_OBJ(obj);
+  offset = get_ic_prop_offset(ic, offset, p->shape);
+  if (offset >= 0)
+    return JS_DupValue(ctx,  p->prop[offset].u.value);
+slow_path:  
+  return JS_GetPropertyInternal(ctx, obj, prop, this_obj, ic, throw_ref_error);      
 }
 
 JSValue JS_GetOwnPropertyNames2(JSContext* ctx, JSValueConst obj1, int flags, int kind) {

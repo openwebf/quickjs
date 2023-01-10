@@ -220,11 +220,12 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
   JSObject* p;
   JSFunctionBytecode* b;
   JSStackFrame sf_s, *sf = &sf_s;
-  const uint8_t* pc;
+  uint8_t* pc;
   int opcode, arg_allocated_size, i;
   JSValue *local_buf, *stack_buf, *var_buf, *arg_buf, *sp, ret_val, *pval;
   JSVarRef** var_refs;
   size_t alloca_size;
+  InlineCache *get_ic, *set_ic;
 
 #if !DIRECT_DISPATCH
 #define SWITCH(pc) switch (opcode = *pc++)
@@ -328,6 +329,8 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
   sf->prev_frame = rt->current_stack_frame;
   rt->current_stack_frame = sf;
   ctx = b->realm; /* set the current realm */
+  get_ic = b->get_ic;
+  set_ic = b->set_ic;
 
 restart:
   for (;;) {
@@ -1479,7 +1482,29 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        val = JS_GetProperty(ctx, sp[-1], atom);
+        get_ic->updated = FALSE;
+        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], get_ic, FALSE);
+        if (unlikely(JS_IsException(val)))
+          goto exception;
+        if (get_ic->updated == TRUE) {
+          get_ic->updated = FALSE;
+          put_u8(pc - 5, OP_get_field_ic);
+          put_u32(pc - 4, get_ic->updated_offset);
+        }
+        JS_FreeValue(ctx, sp[-1]);
+        sp[-1] = val;
+      }
+      BREAK;
+
+      CASE(OP_get_field_ic): {
+        JSValue val;
+        JSAtom atom;
+        int32_t ic_offset;
+        ic_offset = get_u32(pc);
+        atom = get_ic_atom(get_ic, ic_offset);
+        pc += 4;
+        
+        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
         JS_FreeValue(ctx, sp[-1]);
@@ -1493,7 +1518,28 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        val = JS_GetProperty(ctx, sp[-1], atom);
+        get_ic->updated = FALSE;
+        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], get_ic, FALSE);
+        if (unlikely(JS_IsException(val)))
+          goto exception;
+        if (get_ic->updated == TRUE) {
+          get_ic->updated = FALSE;
+          put_u8(pc - 5, OP_get_field2_ic);
+          put_u32(pc - 4, get_ic->updated_offset);
+        }
+        *sp++ = val;
+      }
+      BREAK;
+
+      CASE(OP_get_field2_ic): {
+        JSValue val;
+        JSAtom atom;
+        int32_t ic_offset;
+        ic_offset = get_u32(pc);
+        atom = get_ic_atom(get_ic, ic_offset);
+        pc += 4;
+        
+        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
         *sp++ = val;
@@ -1511,6 +1557,11 @@ restart:
         sp -= 2;
         if (unlikely(ret < 0))
           goto exception;
+      }
+      BREAK;
+
+      CASE(OP_put_field_ic): {
+
       }
       BREAK;
 
@@ -1715,7 +1766,7 @@ restart:
         atom = JS_ValueToAtom(ctx, sp[-1]);
         if (unlikely(atom == JS_ATOM_NULL))
           goto exception;
-        val = JS_GetPropertyInternal(ctx, sp[-2], atom, sp[-3], FALSE);
+        val = JS_GetPropertyInternal(ctx, sp[-2], atom, sp[-3], NULL, FALSE);
         JS_FreeAtom(ctx, atom);
         if (unlikely(JS_IsException(val)))
           goto exception;

@@ -73,6 +73,11 @@ void free_function_bytecode(JSRuntime* rt, JSFunctionBytecode* b) {
     js_free_rt(rt, b->debug.source);
   }
 
+  if (b->get_ic != NULL)
+    free_ic(b->get_ic);
+  if (b->set_ic != NULL)
+    free_ic(b->set_ic);
+
   remove_gc_object(&b->header);
   if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && b->header.ref_count != 0) {
     list_add_tail(&b->header.link, &rt->gc_zero_ref_count_list);

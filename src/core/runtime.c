@@ -438,7 +438,7 @@ JSValue JS_GetGlobalVar(JSContext* ctx, JSAtom prop, BOOL throw_ref_error) {
       return JS_ThrowReferenceErrorUninitialized(ctx, prs->atom);
     return JS_DupValue(ctx, pr->u.value);
   }
-  return JS_GetPropertyInternal(ctx, ctx->global_obj, prop, ctx->global_obj, throw_ref_error);
+  return JS_GetPropertyInternal(ctx, ctx->global_obj, prop, ctx->global_obj, NULL, throw_ref_error);
 }
 
 /* construct a reference to a global variable */

@@ -6,7 +6,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)
 if( supported )
-    message(STATUS "IPO / LTO enabled")
     set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 endif()
 

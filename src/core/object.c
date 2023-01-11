@@ -1975,7 +1975,7 @@ retry:
   return TRUE;
 }
 
-int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
+force_inline int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
   uint32_t tag;
   JSObject *p;
   tag = JS_VALUE_GET_TAG(this_obj);

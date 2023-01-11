@@ -1481,8 +1481,7 @@ restart:
         JSAtom atom;
         atom = get_u32(pc);
         pc += 4;
-
-        get_ic->updated = FALSE;
+        
         val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], get_ic, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
@@ -1505,6 +1504,7 @@ restart:
         pc += 4;
         
         val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
+        get_ic->updated = FALSE;
         if (unlikely(JS_IsException(val)))
           goto exception;
         JS_FreeValue(ctx, sp[-1]);
@@ -1518,8 +1518,7 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        get_ic->updated = FALSE;
-        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], get_ic, FALSE);
+        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], NULL, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
         if (get_ic->updated == TRUE) {
@@ -1540,6 +1539,7 @@ restart:
         pc += 4;
         
         val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
+        get_ic->updated = FALSE;
         if (unlikely(JS_IsException(val)))
           goto exception;
         *sp++ = val;
@@ -1552,7 +1552,6 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        set_ic->updated = FALSE;
         ret = JS_SetPropertyInternal(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic);
         JS_FreeValue(ctx, sp[-2]);
         sp -= 2;
@@ -1571,10 +1570,11 @@ restart:
         JSAtom atom;
         int32_t ic_offset;
         ic_offset = get_u32(pc);
-        atom = get_ic_atom(get_ic, ic_offset);
+        atom = get_ic_atom(set_ic, ic_offset);
         pc += 4;
         
         ret = JS_SetPropertyInternalWithIC(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic, ic_offset);
+        set_ic->updated = FALSE;
         JS_FreeValue(ctx, sp[-2]);
         sp -= 2;
         if (unlikely(ret < 0))

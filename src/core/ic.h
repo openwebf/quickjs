@@ -38,7 +38,7 @@ uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
                      uint32_t prop_offset);
 uint32_t add_ic_slot1(InlineCache *ic, JSAtom atom);
 force_inline int32_t get_ic_prop_offset(InlineCache *ic, uint32_t cache_offset,
-                                  JSShape *shape) {
+                                        JSShape *shape) {
   uint32_t i;
   InlineCacheRingSlot *cr;
   InlineCacheRingItem *buffer;

@@ -551,9 +551,9 @@ force_inline JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst o
     goto slow_path;
   p = JS_VALUE_GET_OBJ(obj);
   offset = get_ic_prop_offset(ic, offset, p->shape);
-  if (offset >= 0)
-    return JS_DupValue(ctx,  p->prop[offset].u.value);
-slow_path:  
+  if (likely(offset >= 0))
+    return JS_DupValue(ctx, p->prop[offset].u.value);
+slow_path:
   return JS_GetPropertyInternal(ctx, obj, prop, this_obj, ic, throw_ref_error);      
 }
 

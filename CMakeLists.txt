@@ -1,7 +1,10 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.9.4)
 project(QUICKJS)
 set(C_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
@@ -57,3 +60,10 @@ target_link_libraries(qjs quickjs ${LINK_LIBRARIES})
 
 add_executable(run-test262 run-test262.c quickjs-libc.c)
 target_link_libraries(run-test262 quickjs ${LINK_LIBRARIES})
+
+if( supported )
+    message(STATUS "IPO / LTO enabled")
+    set_property(TARGET qjsc PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET qjs PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET run-test262 PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()

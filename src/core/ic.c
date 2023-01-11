@@ -25,7 +25,7 @@
 
 #include "ic.h"
 
-static inline uint32_t get_index_hash(JSAtom atom, int hash_bits) {
+static force_inline uint32_t get_index_hash(JSAtom atom, int hash_bits) {
   return (atom * 0x9e370001) >> (32 - hash_bits);
 }
 
@@ -35,7 +35,7 @@ InlineCache *init_ic(JSRuntime *rt) {
   if (unlikely(!ic))
     goto fail;
   ic->count = 0;
-  ic->hash_bits = 4;
+  ic->hash_bits = 2;
   ic->capacity = 1 << ic->hash_bits;
   ic->rt = rt;
   ic->hash = js_malloc_rt(rt, sizeof(ic->hash[0]) * ic->capacity);

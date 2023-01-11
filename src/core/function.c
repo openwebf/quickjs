@@ -1484,7 +1484,7 @@ restart:
         val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], ic, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
-        if (ic->updated == TRUE) {
+        if (ic != NULL && ic->updated == TRUE) {
           ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field_ic);
           put_u32(pc - 4, ic->updated_offset);
@@ -1520,7 +1520,7 @@ restart:
         val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], NULL, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
-        if (ic->updated == TRUE) {
+        if (ic != NULL && ic->updated == TRUE) {
           ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field2_ic);
           put_u32(pc - 4, ic->updated_offset);
@@ -1556,7 +1556,7 @@ restart:
         sp -= 2;
         if (unlikely(ret < 0))
           goto exception;
-        if (ic->updated == TRUE) {
+        if (ic != NULL && ic->updated == TRUE) {
           ic->updated = FALSE;
           put_u8(pc - 5, OP_put_field_ic);
           put_u32(pc - 4, ic->updated_offset);

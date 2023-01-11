@@ -25,7 +25,7 @@
 
 #include "ic.h"
 
-uint32_t get_index_hash(JSAtom atom, int hash_bits) {
+static inline uint32_t get_index_hash(JSAtom atom, int hash_bits) {
   return (atom * 0x9e370001) >> (32 - hash_bits);
 }
 
@@ -123,12 +123,12 @@ int free_ic(InlineCache *ic) {
 }
 
 uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
-                    uint32_t prop_offset) {
+                     uint32_t prop_offset) {
   int32_t i;
   uint32_t h;
   InlineCacheHashSlot *ch;
   InlineCacheRingSlot *cr;
-  JSShape* sh;
+  JSShape *sh;
   cr = NULL;
   h = get_index_hash(atom, ic->hash_bits);
   for (ch = ic->hash[h]; ch != NULL; ch = ch->next)
@@ -146,7 +146,7 @@ uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
     }
 
     i = (i + 1) % IC_CACHE_ITEM_CAPACITY;
-    if (i == cr->index)
+    if (unlikely(i == cr->index))
       break;
   }
 

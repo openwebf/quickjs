@@ -61,7 +61,7 @@ inline int32_t get_ic_prop_offset(InlineCache *ic, uint32_t cache_offset,
   return -1;
 }
 
-inline JSAtom get_ic_atom(InlineCache *ic, uint32_t cache_offset) {
+force_inline JSAtom get_ic_atom(InlineCache *ic, uint32_t cache_offset) {
   assert(cache_offset < ic->capacity);
   return ic->cache[cache_offset].atom;
 }

@@ -1765,16 +1765,17 @@ int JS_SetPropertyGeneric(JSContext* ctx, JSValueConst obj, JSAtom prop, JSValue
    freed by the function. 'flags' is a bitmask of JS_PROP_NO_ADD,
    JS_PROP_THROW or JS_PROP_THROW_STRICT. If JS_PROP_NO_ADD is set,
    the new property is not added and an error is raised. */
-int JS_SetPropertyInternal(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags) {
+int JS_SetPropertyInternal(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic) {
   JSObject *p, *p1;
   JSShapeProperty* prs;
   JSProperty* pr;
   uint32_t tag;
   JSPropertyDescriptor desc;
-  int ret;
+  int ret, offset;
 #if 0
     printf("JS_SetPropertyInternal: "); print_atom(ctx, prop); printf("\n");
 #endif
+  offset = 0;
   tag = JS_VALUE_GET_TAG(this_obj);
   if (unlikely(tag != JS_TAG_OBJECT)) {
     switch (tag) {
@@ -1795,10 +1796,14 @@ int JS_SetPropertyInternal(JSContext* ctx, JSValueConst this_obj, JSAtom prop, J
   }
   p = JS_VALUE_GET_OBJ(this_obj);
 retry:
-  prs = find_own_property(&pr, p, prop);
+  prs = find_own_property_ic(&pr, p, prop, &offset);
   if (prs) {
     if (likely((prs->flags & (JS_PROP_TMASK | JS_PROP_WRITABLE | JS_PROP_LENGTH)) == JS_PROP_WRITABLE)) {
       /* fast case */
+      if (ic != NULL && p->shape->is_hashed) {
+        ic->updated = TRUE;
+        ic->updated_offset = add_ic_slot(ic, prop, p, offset);
+      }
       set_value(ctx, &pr->u.value, val);
       return TRUE;
     } else if (prs->flags & JS_PROP_LENGTH) {
@@ -1970,6 +1975,22 @@ retry:
   return TRUE;
 }
 
+int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
+  uint32_t tag;
+  JSObject *p;
+  tag = JS_VALUE_GET_TAG(this_obj);
+  if (unlikely(tag != JS_TAG_OBJECT))
+    goto slow_path;
+  p = JS_VALUE_GET_OBJ(this_obj);
+  offset = get_ic_prop_offset(ic, offset, p->shape);
+  if (likely(offset >= 0)) {
+    set_value(ctx, &p->prop[offset].u.value, val);
+    return TRUE;
+  }
+slow_path:
+  return JS_SetPropertyInternal(ctx, this_obj, prop, val, flags, ic);
+}
+
 /* flags can be JS_PROP_THROW or JS_PROP_THROW_STRICT */
 int JS_SetPropertyValue(JSContext* ctx, JSValueConst this_obj, JSValue prop, JSValue val, int flags) {
   if (likely(JS_VALUE_GET_TAG(this_obj) == JS_TAG_OBJECT && JS_VALUE_GET_TAG(prop) == JS_TAG_INT)) {
@@ -2092,7 +2113,7 @@ int JS_SetPropertyValue(JSContext* ctx, JSValueConst this_obj, JSValue prop, JSV
       JS_FreeValue(ctx, val);
       return -1;
     }
-    ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, flags);
+    ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, flags, NULL);
     JS_FreeAtom(ctx, atom);
     return ret;
   }
@@ -2124,7 +2145,7 @@ int JS_SetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* prop, J
   JSAtom atom;
   int ret;
   atom = JS_NewAtom(ctx, prop);
-  ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, JS_PROP_THROW);
+  ret = JS_SetPropertyInternal(ctx, this_obj, atom, val, JS_PROP_THROW, NULL);
   JS_FreeAtom(ctx, atom);
   return ret;
 }

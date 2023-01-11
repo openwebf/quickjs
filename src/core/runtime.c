@@ -528,7 +528,7 @@ int JS_SetGlobalVar(JSContext* ctx, JSAtom prop, JSValue val, int flag) {
   flags = JS_PROP_THROW_STRICT;
   if (is_strict_mode(ctx))
     flags |= JS_PROP_NO_ADD;
-  return JS_SetPropertyInternal(ctx, ctx->global_obj, prop, val, flags);
+  return JS_SetPropertyInternal(ctx, ctx->global_obj, prop, val, flags, NULL);
 }
 
 /* return -1, FALSE or TRUE. return FALSE if not configurable or

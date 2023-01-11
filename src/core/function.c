@@ -1552,16 +1552,33 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        ret = JS_SetPropertyInternal(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT);
+        set_ic->updated = FALSE;
+        ret = JS_SetPropertyInternal(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic);
         JS_FreeValue(ctx, sp[-2]);
         sp -= 2;
         if (unlikely(ret < 0))
           goto exception;
+        if (set_ic->updated == TRUE) {
+          set_ic->updated = FALSE;
+          put_u8(pc - 5, OP_put_field_ic);
+          put_u32(pc - 4, set_ic->updated_offset);
+        }
       }
       BREAK;
 
       CASE(OP_put_field_ic): {
-
+        int ret;
+        JSAtom atom;
+        int32_t ic_offset;
+        ic_offset = get_u32(pc);
+        atom = get_ic_atom(get_ic, ic_offset);
+        pc += 4;
+        
+        ret = JS_SetPropertyInternalWithIC(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic, ic_offset);
+        JS_FreeValue(ctx, sp[-2]);
+        sp -= 2;
+        if (unlikely(ret < 0))
+          goto exception;
       }
       BREAK;
 
@@ -2449,7 +2466,7 @@ restart:
               break;
             case OP_with_put_var:
               /* XXX: check if strict mode */
-              ret = JS_SetPropertyInternal(ctx, obj, atom, sp[-2], JS_PROP_THROW_STRICT);
+              ret = JS_SetPropertyInternal(ctx, obj, atom, sp[-2], JS_PROP_THROW_STRICT, NULL);
               JS_FreeValue(ctx, sp[-1]);
               sp -= 2;
               if (unlikely(ret < 0))

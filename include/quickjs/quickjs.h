@@ -724,9 +724,10 @@ static js_force_inline JSValue JS_GetProperty(JSContext* ctx, JSValueConst this_
 JSValue JS_GetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* prop);
 JSValue JS_GetPropertyUint32(JSContext* ctx, JSValueConst this_obj, uint32_t idx);
 
-int JS_SetPropertyInternal(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags);
+int JS_SetPropertyInternal(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic);
+int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset);
 static inline int JS_SetProperty(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val) {
-  return JS_SetPropertyInternal(ctx, this_obj, prop, val, JS_PROP_THROW);
+  return JS_SetPropertyInternal(ctx, this_obj, prop, val, JS_PROP_THROW, NULL);
 }
 int JS_SetPropertyUint32(JSContext* ctx, JSValueConst this_obj, uint32_t idx, JSValue val);
 int JS_SetPropertyInt64(JSContext* ctx, JSValueConst this_obj, int64_t idx, JSValue val);

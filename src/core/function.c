@@ -225,7 +225,7 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
   JSValue *local_buf, *stack_buf, *var_buf, *arg_buf, *sp, ret_val, *pval;
   JSVarRef** var_refs;
   size_t alloca_size;
-  InlineCache *get_ic, *set_ic;
+  InlineCache *ic;
 
 #if !DIRECT_DISPATCH
 #define SWITCH(pc) switch (opcode = *pc++)
@@ -329,8 +329,7 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
   sf->prev_frame = rt->current_stack_frame;
   rt->current_stack_frame = sf;
   ctx = b->realm; /* set the current realm */
-  get_ic = b->get_ic;
-  set_ic = b->set_ic;
+  ic = b->ic;
 
 restart:
   for (;;) {
@@ -1482,13 +1481,13 @@ restart:
         atom = get_u32(pc);
         pc += 4;
         
-        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], get_ic, FALSE);
+        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], ic, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
-        if (get_ic->updated == TRUE) {
-          get_ic->updated = FALSE;
+        if (ic->updated == TRUE) {
+          ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field_ic);
-          put_u32(pc - 4, get_ic->updated_offset);
+          put_u32(pc - 4, ic->updated_offset);
         }
         JS_FreeValue(ctx, sp[-1]);
         sp[-1] = val;
@@ -1500,11 +1499,11 @@ restart:
         JSAtom atom;
         int32_t ic_offset;
         ic_offset = get_u32(pc);
-        atom = get_ic_atom(get_ic, ic_offset);
+        atom = get_ic_atom(ic, ic_offset);
         pc += 4;
         
-        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
-        get_ic->updated = FALSE;
+        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], ic, ic_offset, FALSE);
+        ic->updated = FALSE;
         if (unlikely(JS_IsException(val)))
           goto exception;
         JS_FreeValue(ctx, sp[-1]);
@@ -1521,10 +1520,10 @@ restart:
         val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], NULL, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
-        if (get_ic->updated == TRUE) {
-          get_ic->updated = FALSE;
+        if (ic->updated == TRUE) {
+          ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field2_ic);
-          put_u32(pc - 4, get_ic->updated_offset);
+          put_u32(pc - 4, ic->updated_offset);
         }
         *sp++ = val;
       }
@@ -1535,11 +1534,11 @@ restart:
         JSAtom atom;
         int32_t ic_offset;
         ic_offset = get_u32(pc);
-        atom = get_ic_atom(get_ic, ic_offset);
+        atom = get_ic_atom(ic, ic_offset);
         pc += 4;
         
-        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], get_ic, ic_offset, FALSE);
-        get_ic->updated = FALSE;
+        val = JS_GetPropertyInternalWithIC(ctx, sp[-1], atom, sp[-1], ic, ic_offset, FALSE);
+        ic->updated = FALSE;
         if (unlikely(JS_IsException(val)))
           goto exception;
         *sp++ = val;
@@ -1552,15 +1551,15 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        ret = JS_SetPropertyInternal(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic);
+        ret = JS_SetPropertyInternal(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, ic);
         JS_FreeValue(ctx, sp[-2]);
         sp -= 2;
         if (unlikely(ret < 0))
           goto exception;
-        if (set_ic->updated == TRUE) {
-          set_ic->updated = FALSE;
+        if (ic->updated == TRUE) {
+          ic->updated = FALSE;
           put_u8(pc - 5, OP_put_field_ic);
-          put_u32(pc - 4, set_ic->updated_offset);
+          put_u32(pc - 4, ic->updated_offset);
         }
       }
       BREAK;
@@ -1570,11 +1569,11 @@ restart:
         JSAtom atom;
         int32_t ic_offset;
         ic_offset = get_u32(pc);
-        atom = get_ic_atom(set_ic, ic_offset);
+        atom = get_ic_atom(ic, ic_offset);
         pc += 4;
         
-        ret = JS_SetPropertyInternalWithIC(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, set_ic, ic_offset);
-        set_ic->updated = FALSE;
+        ret = JS_SetPropertyInternalWithIC(ctx, sp[-2], atom, sp[-1], JS_PROP_THROW_STRICT, ic, ic_offset);
+        ic->updated = FALSE;
         JS_FreeValue(ctx, sp[-2]);
         sp -= 2;
         if (unlikely(ret < 0))

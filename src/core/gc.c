@@ -642,17 +642,9 @@ void mark_children(JSRuntime* rt, JSGCObjectHeader* gp, JS_MarkFunc* mark_func) 
         }
         if (b->realm)
           mark_func(rt, &b->realm->header);
-        if (b->get_ic) {
-          for (i = 0; i < b->get_ic->count; i++) {
-            buffer = b->get_ic->cache[i].buffer;
-            for (j = 0; j < IC_CACHE_ITEM_CAPACITY; j++)
-              if (buffer[j].shape) 
-                mark_func(rt, &buffer[j].shape->header);
-          }
-        }
-        if (b->set_ic) {
-          for (i = 0; i < b->set_ic->count; i++) {
-            buffer = b->set_ic->cache[i].buffer;
+        if (b->ic) {
+          for (i = 0; i < b->ic->count; i++) {
+            buffer = b->ic->cache[i].buffer;
             for (j = 0; j < IC_CACHE_ITEM_CAPACITY; j++)
               if (buffer[j].shape) 
                 mark_func(rt, &buffer[j].shape->header);

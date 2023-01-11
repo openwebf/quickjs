@@ -571,8 +571,7 @@ typedef struct JSFunctionBytecode {
     JSValue *cpool; /* constant pool (self pointer) */
     int cpool_count;
     int closure_var_count;
-    InlineCache *get_ic;
-    InlineCache *set_ic;
+    InlineCache *ic;
     struct {
         /* debug info, move to separate structure to save memory? */
         JSAtom filename;

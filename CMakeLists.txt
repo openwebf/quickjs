@@ -20,7 +20,7 @@ set(COMPILE_FLAGS -Wall -MMD -Wno-array-bounds -Wno-format-truncation)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMPILE_FLAGS ${COMPILE_FLAGS} -g)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(COMPILE_FLAGS ${COMPILE_FLAGS} -O2)
+    set(COMPILE_FLAGS ${COMPILE_FLAGS} -O3)
 endif()
 
 if (UNIX)

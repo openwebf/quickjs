@@ -2181,6 +2181,7 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
             goto done1;
           emit_op(s, OP_get_field2);
           emit_atom(s, JS_ATOM_concat);
+          emit_ic(s, JS_ATOM_concat);
         }
         depth++;
       } else {
@@ -3400,6 +3401,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
       emit_u32(s, idx);
       emit_op(s, OP_put_field);
       emit_atom(s, JS_ATOM_length);
+      emit_ic(s, JS_ATOM_length);
     }
     goto done;
   }
@@ -3464,6 +3466,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
     emit_op(s, OP_dup1);    /* array length - array array length */
     emit_op(s, OP_put_field);
     emit_atom(s, JS_ATOM_length);
+    emit_ic(s, JS_ATOM_length);
   } else {
     emit_op(s, OP_drop);    /* array length - array */
   }
@@ -5483,12 +5486,14 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       label_next = emit_goto(s, OP_if_true, -1); /* end of loop */
       emit_label(s, label_yield);
       if (is_async) {
         /* OP_async_yield_star takes the value as parameter */
         emit_op(s, OP_get_field);
         emit_atom(s, JS_ATOM_value);
+        emit_ic(s, JS_ATOM_value);
         emit_op(s, OP_await);
         emit_op(s, OP_async_yield_star);
       } else {
@@ -5517,10 +5522,12 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       emit_goto(s, OP_if_false, label_yield);
 
       emit_op(s, OP_get_field);
       emit_atom(s, JS_ATOM_value);
+      emit_ic(s, JS_ATOM_value);
 
       emit_label(s, label_return1);
       emit_op(s, OP_nip);
@@ -5538,6 +5545,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       emit_goto(s, OP_if_false, label_yield);
       emit_goto(s, OP_goto, label_next);
       /* close the iterator and throw a type error exception */
@@ -5556,6 +5564,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_label(s, label_next);
       emit_op(s, OP_get_field);
       emit_atom(s, JS_ATOM_value);
+      emit_ic(s, JS_ATOM_value);
       emit_op(s, OP_nip); /* keep the value associated with
                              done = true */
       emit_op(s, OP_nip);
@@ -5808,6 +5817,7 @@ static void emit_return(JSParseState *s, BOOL hasval)
         emit_op(s, OP_drop); /* next */
         emit_op(s, OP_get_field2);
         emit_atom(s, JS_ATOM_return);
+        emit_ic(s, JS_ATOM_return);
         /* stack: iter_obj return_func */
         emit_op(s, OP_dup);
         emit_op(s, OP_is_undefined_or_null);

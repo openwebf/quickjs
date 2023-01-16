@@ -269,6 +269,7 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
       pc = sf->cur_pc;
       sf->prev_frame = rt->current_stack_frame;
       rt->current_stack_frame = sf;
+      ic = b->ic;
       if (s->throw_flag)
         goto exception;
       else

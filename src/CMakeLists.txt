@@ -16,6 +16,7 @@ add_library(quickjs
     core/convertion.c
     core/runtime.c
     core/module.c
+    core/ic.c
     core/builtins/js-array.c
     core/builtins/js-async-function.c
     core/builtins/js-async-generator.c

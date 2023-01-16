@@ -3,7 +3,8 @@ bin
 .idea
 .vscode
 lib
-cmake-build-debug
+cmake-build-*
+perf.*
 build
 *.expand
 *.svg

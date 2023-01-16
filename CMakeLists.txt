@@ -1,7 +1,13 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.9.4)
 project(QUICKJS)
 set(C_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include(CheckIPOSupported)
+check_ipo_supported(RESULT supported OUTPUT error)
+if( supported )
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+endif()
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
@@ -14,7 +20,7 @@ set(COMPILE_FLAGS -Wall -MMD -Wno-array-bounds -Wno-format-truncation)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(COMPILE_FLAGS ${COMPILE_FLAGS} -g)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(COMPILE_FLAGS ${COMPILE_FLAGS} -O2)
+    set(COMPILE_FLAGS ${COMPILE_FLAGS} -O3)
 endif()
 
 if (UNIX)

@@ -1512,6 +1512,10 @@ static void emit_column(JSParseState *s, int column_num) {
   emit_u32(s, column_num);
 }
 
+static void emit_ic(JSParseState *s, JSAtom atom) {
+  add_ic_slot1(s->cur_func->ic, atom);
+}
+
 static int update_label(JSFunctionDef *s, int label, int delta)
 {
   LabelSlot *ls;
@@ -2177,6 +2181,7 @@ static __exception int js_parse_template(JSParseState *s, int call, int *argc)
             goto done1;
           emit_op(s, OP_get_field2);
           emit_atom(s, JS_ATOM_concat);
+          emit_ic(s, JS_ATOM_concat);
         }
         depth++;
       } else {
@@ -3396,6 +3401,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
       emit_u32(s, idx);
       emit_op(s, OP_put_field);
       emit_atom(s, JS_ATOM_length);
+      emit_ic(s, JS_ATOM_length);
     }
     goto done;
   }
@@ -3460,6 +3466,7 @@ static __exception int js_parse_array_literal(JSParseState *s)
     emit_op(s, OP_dup1);    /* array length - array array length */
     emit_op(s, OP_put_field);
     emit_atom(s, JS_ATOM_length);
+    emit_ic(s, JS_ATOM_length);
   } else {
     emit_op(s, OP_drop);    /* array length - array */
   }
@@ -3560,6 +3567,7 @@ static __exception int get_lvalue(JSParseState *s, int *popcode, int *pscope,
       case OP_get_field:
         emit_op(s, OP_get_field2);
         emit_atom(s, name);
+        emit_ic(s, name);
         break;
       case OP_scope_get_private_field:
         emit_op(s, OP_scope_get_private_field2);
@@ -3707,6 +3715,7 @@ static void put_lvalue(JSParseState *s, int opcode, int scope,
     case OP_get_field:
       emit_op(s, OP_put_field);
       emit_u32(s, name);  /* name has refcount */
+      emit_ic(s, name);
       break;
     case OP_scope_get_private_field:
       emit_op(s, OP_scope_put_private_field);
@@ -3970,6 +3979,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
             /* get the named property from the source object */
             emit_op(s, OP_get_field2);
             emit_u32(s, prop_name);
+            emit_ic(s, prop_name);
           }
           if (js_parse_destructuring_element(s, tok, is_arg, TRUE, -1, TRUE) < 0)
             return -1;
@@ -4059,6 +4069,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
           /* source -- val */
           emit_op(s, OP_get_field);
           emit_u32(s, prop_name);
+          emit_ic(s, prop_name);
         }
       } else {
         /* prop_type = PROP_TYPE_VAR, cannot be a computed property */
@@ -4090,6 +4101,7 @@ static int js_parse_destructuring_element(JSParseState *s, int tok, int is_arg,
         /* source -- source val */
         emit_op(s, OP_get_field2);
         emit_u32(s, prop_name);
+        emit_ic(s, prop_name);
       }
     set_val:
       if (tok) {
@@ -4917,6 +4929,7 @@ static __exception int js_parse_postfix_expr(JSParseState *s, int parse_flags)
           }
           emit_op(s, OP_get_field);
           emit_atom(s, s->token.u.ident.atom);
+          emit_ic(s, s->token.u.ident.atom);
         }
       }
       if (next_token(s))
@@ -5473,12 +5486,14 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       label_next = emit_goto(s, OP_if_true, -1); /* end of loop */
       emit_label(s, label_yield);
       if (is_async) {
         /* OP_async_yield_star takes the value as parameter */
         emit_op(s, OP_get_field);
         emit_atom(s, JS_ATOM_value);
+        emit_ic(s, JS_ATOM_value);
         emit_op(s, OP_await);
         emit_op(s, OP_async_yield_star);
       } else {
@@ -5507,10 +5522,12 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       emit_goto(s, OP_if_false, label_yield);
 
       emit_op(s, OP_get_field);
       emit_atom(s, JS_ATOM_value);
+      emit_ic(s, JS_ATOM_value);
 
       emit_label(s, label_return1);
       emit_op(s, OP_nip);
@@ -5528,6 +5545,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_op(s, OP_iterator_check_object);
       emit_op(s, OP_get_field2);
       emit_atom(s, JS_ATOM_done);
+      emit_ic(s, JS_ATOM_done);
       emit_goto(s, OP_if_false, label_yield);
       emit_goto(s, OP_goto, label_next);
       /* close the iterator and throw a type error exception */
@@ -5546,6 +5564,7 @@ static __exception int js_parse_assign_expr2(JSParseState *s, int parse_flags)
       emit_label(s, label_next);
       emit_op(s, OP_get_field);
       emit_atom(s, JS_ATOM_value);
+      emit_ic(s, JS_ATOM_value);
       emit_op(s, OP_nip); /* keep the value associated with
                              done = true */
       emit_op(s, OP_nip);
@@ -5798,6 +5817,7 @@ static void emit_return(JSParseState *s, BOOL hasval)
         emit_op(s, OP_drop); /* next */
         emit_op(s, OP_get_field2);
         emit_atom(s, JS_ATOM_return);
+        emit_ic(s, JS_ATOM_return);
         /* stack: iter_obj return_func */
         emit_op(s, OP_dup);
         emit_op(s, OP_is_undefined_or_null);
@@ -7516,6 +7536,7 @@ JSFunctionDef *js_new_function_def(JSContext *ctx,
   //fd->pc2line_last_pc = 0;
   fd->last_opcode_line_num = line_num;
 
+  fd->ic = init_ic(ctx->rt);
   return fd;
 }
 
@@ -11467,6 +11488,13 @@ static JSValue js_create_function(JSContext *ctx, JSFunctionDef *fd)
   b->arguments_allowed = fd->arguments_allowed;
   b->backtrace_barrier = fd->backtrace_barrier;
   b->realm = JS_DupContext(ctx);
+
+  b->ic = fd->ic;
+  rebuild_ic(b->ic);
+  if (b->ic->count == 0) {
+    free_ic(b->ic);
+    b->ic = NULL;
+  }
 
   add_gc_object(ctx->rt, &b->header, JS_GC_OBJ_TYPE_FUNCTION_BYTECODE);
 

@@ -10,5 +10,5 @@ jobs:
       - run: git clone https://github.com/openwebf/quickjs
       - run: ls -lah
       - run: cd quickjs && bash scripts/ci.sh
-      - run: cat test262_report.txt
-      - run: cat test262_errors.txt
+      - run: cd quickjs && cat test262_report.txt
+      - run: cd quickjs && cat test262_errors.txt

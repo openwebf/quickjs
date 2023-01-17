@@ -12,7 +12,9 @@ In addition to the relevant features and optimizations in the [TODO](https://git
 - [x] Column number
 - [ ] Basic Debugger API
 - [ ] Poly IC
-- [ ] Tri-Color Marking GC
+  - [x] Self Poly IC
+  - [ ] Prototype Poly IC 
+- [ ] Improve The Performance Of GC
 
 In our plan, we first complete the above optimizations and then gradually add the remaining parts.
 

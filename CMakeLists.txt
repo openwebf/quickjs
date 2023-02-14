@@ -14,7 +14,9 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${PROJECT_SOURCE_DIR}/vendor/mimalloc/include)
 add_subdirectory(src)
+add_subdirectory(vendor/mimalloc)
 
 set(COMPILE_FLAGS -Wall -MMD -Wno-array-bounds -Wno-format-truncation)
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -49,7 +51,7 @@ if(WIN32)
 endif()
 
 add_executable(qjsc qjsc.c quickjs-libc.c)
-target_link_libraries(qjsc quickjs ${LINK_LIBRARIES})
+target_link_libraries(qjsc quickjs ${LINK_LIBRARIES} mimalloc-static)
 target_compile_definitions(qjsc PUBLIC ${QJSC_CONFIG})
 
 add_custom_command(
@@ -59,7 +61,7 @@ add_custom_command(
 )
 
 add_executable(qjs qjs.c quickjs-libc.c repl.c qjscalc.c)
-target_link_libraries(qjs quickjs ${LINK_LIBRARIES})
+target_link_libraries(qjs quickjs ${LINK_LIBRARIES} mimalloc-static)
 
 add_executable(run-test262 run-test262.c quickjs-libc.c)
-target_link_libraries(run-test262 quickjs ${LINK_LIBRARIES})
+target_link_libraries(run-test262 quickjs ${LINK_LIBRARIES} mimalloc-static)

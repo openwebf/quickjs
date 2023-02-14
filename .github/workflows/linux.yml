@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt install -y libcppunit-dev cmake
-      - run: git clone https://github.com/openwebf/quickjs
+      - run: git clone --recurse-submodules https://github.com/openwebf/quickjs
       - run: ls -lah
       - run: cd quickjs && bash scripts/ci.sh
       - run: cd quickjs && cat test262_report.txt

@@ -36,8 +36,8 @@
 #include <time.h>
 #include <fenv.h>
 #include <math.h>
-#include "vendor/mimalloc/include/mimalloc.h"
 
+#include "mimalloc.h"
 #ifdef CONFIG_BIGNUM
 #include "quickjs/libbf.h"
 #endif

@@ -46,7 +46,7 @@ void js_trigger_gc(JSRuntime* rt, size_t size) {
 
 /* default memory allocation functions with memory limitation */
 static inline size_t js_def_malloc_usable_size(void* ptr) {
-  return mi_malloc_usable_size(ptr);
+  return mi_usable_size(ptr);
 }
 
 size_t js_malloc_usable_size_unknown(const void* ptr) {
@@ -216,7 +216,7 @@ void* js_def_realloc(JSMallocState* s, void* ptr, size_t size) {
   if (s->malloc_size + size - old_size > s->malloc_limit)
     return NULL;
 
-  ptr = realloc(ptr, size);
+  ptr = mi_realloc(ptr, size);
   if (!ptr)
     return NULL;
 

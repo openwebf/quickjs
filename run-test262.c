@@ -35,6 +35,7 @@
 #include <dirent.h>
 #include <ftw.h>
 
+#include "mimalloc.h"
 #include "include/quickjs/cutils.h"
 #include "include/quickjs/list.h"
 #include "quickjs-libc.h"
@@ -124,7 +125,7 @@ void perror_exit(int errcode, const char *s)
 
 char *strdup_len(const char *str, int len)
 {
-    char *p = malloc(len + 1);
+    char *p = mi_malloc(len + 1);
     memcpy(p, str, len);
     p[len] = '\0';
     return p;
@@ -141,13 +142,13 @@ char *str_append(char **pp, const char *sep, const char *str) {
     if (p) {
         len = strlen(p) + strlen(sep);
     }
-    res = malloc(len + strlen(str) + 1);
+    res = mi_malloc(len + strlen(str) + 1);
     if (p) {
         strcpy(res, p);
         strcat(res, sep);
     }
     strcpy(res + len, str);
-    free(p);
+    mi_free(p);
     return *pp = res;
 }
 
@@ -196,11 +197,11 @@ char *compose_path(const char *path, const char *name)
     char *d, *q;
 
     if (!path || path[0] == '\0' || *name == '/') {
-        d = strdup(name);
+        d = mi_strdup(name);
     } else {
         path_len = strlen(path);
         name_len = strlen(name);
-        d = malloc(path_len + 1 + name_len + 1);
+        d = mi_malloc(path_len + 1 + name_len + 1);
         if (d) {
             q = d;
             memcpy(q, path, path_len);
@@ -253,7 +254,7 @@ void namelist_sort(namelist_t *lp)
         /* remove duplicates */
         for (count = i = 1; i < lp->count; i++) {
             if (namelist_cmp(lp->array[count - 1], lp->array[i]) == 0) {
-                free(lp->array[i]);
+                mi_free(lp->array[i]);
             } else {
                 lp->array[count++] = lp->array[i];
             }
@@ -292,7 +293,7 @@ void namelist_add(namelist_t *lp, const char *base, const char *name)
         goto fail;
     if (lp->count == lp->size) {
         size_t newsize = lp->size + (lp->size >> 1) + 4;
-        char **a = realloc(lp->array, sizeof(lp->array[0]) * newsize);
+        char **a = mi_realloc(lp->array, sizeof(lp->array[0]) * newsize);
         if (!a)
             goto fail;
         lp->array = a;
@@ -324,7 +325,7 @@ void namelist_load(namelist_t *lp, const char *filename)
         
         namelist_add(lp, base_name, p);
     }
-    free(base_name);
+    mi_free(base_name);
     fclose(f);
 }
 
@@ -338,16 +339,16 @@ void namelist_add_from_error_file(namelist_t *lp, const char *file)
             continue;
         pp = strdup_len(p0, p + 3 - p0);
         namelist_add(lp, NULL, pp);
-        free(pp);
+        mi_free(pp);
     }
 }
 
 void namelist_free(namelist_t *lp)
 {
     while (lp->count > 0) {
-        free(lp->array[--lp->count]);
+        mi_free(lp->array[--lp->count]);
     }
-    free(lp->array);
+    mi_free(lp->array);
     lp->array = NULL;
     lp->size = 0;
 }
@@ -474,7 +475,7 @@ static void *agent_start(void *arg)
     add_helpers(ctx);
     ret_val = JS_Eval(ctx, agent->script, strlen(agent->script),
                       "<evalScript>", JS_EVAL_TYPE_GLOBAL);
-    free(agent->script);
+    mi_free(agent->script);
     agent->script = NULL;
     if (JS_IsException(ret_val))
         js_std_dump_error(ctx);
@@ -537,11 +538,11 @@ static JSValue js_agent_start(JSContext *ctx, JSValue this_val,
     script = JS_ToCString(ctx, argv[0]);
     if (!script)
         return JS_EXCEPTION;
-    agent = malloc(sizeof(*agent));
+    agent = mi_malloc(sizeof(*agent));
     memset(agent, 0, sizeof(*agent));
     agent->broadcast_func = JS_UNDEFINED;
     agent->broadcast_sab = JS_UNDEFINED;
-    agent->script = strdup(script);
+    agent->script = mi_strdup(script);
     JS_FreeCString(ctx, script);
     list_add_tail(&agent->link, &agent_list);
     pthread_create(&agent->tid, NULL, agent_start, agent);
@@ -558,7 +559,7 @@ static void js_agent_free(JSContext *ctx)
         pthread_join(agent->tid, NULL);
         JS_FreeValue(ctx, agent->broadcast_sab);
         list_del(&agent->link);
-        free(agent);
+        mi_free(agent);
     }
 }
  
@@ -677,8 +678,8 @@ static JSValue js_agent_getReport(JSContext *ctx, JSValue this_val,
     pthread_mutex_unlock(&report_mutex);
     if (rep) {
         ret = JS_NewString(ctx, rep->str);
-        free(rep->str);
-        free(rep);
+        mi_free(rep->str);
+        mi_free(rep);
     } else {
         ret = JS_NULL;
     }
@@ -694,8 +695,8 @@ static JSValue js_agent_report(JSContext *ctx, JSValue this_val,
     str = JS_ToCString(ctx, argv[0]);
     if (!str)
         return JS_EXCEPTION;
-    rep = malloc(sizeof(*rep));
-    rep->str = strdup(str);
+    rep = mi_malloc(sizeof(*rep));
+    rep->str = mi_strdup(str);
     JS_FreeCString(ctx, str);
     
     pthread_mutex_lock(&report_mutex);
@@ -883,7 +884,7 @@ void update_exclude_dirs(void)
         name = ep->array[i];
         if (has_suffix(name, "/")) {
             namelist_add(dp, NULL, name);
-            free(name);
+            mi_free(name);
         } else {
             ep->array[count++] = name;
         }
@@ -898,7 +899,7 @@ void update_exclude_dirs(void)
         for (j = 0; j < dp->count; j++) {
             if (has_prefix(name, dp->array[j])) {
                 test_excluded++;
-                free(name);
+                mi_free(name);
                 name = NULL;
                 break;
             }
@@ -972,7 +973,7 @@ void load_config(const char *filename)
             if (str_equal(p, "testdir")) {
                 char *testdir = compose_path(base_name, q);
                 enumerate_tests(testdir);
-                free(testdir);
+                mi_free(testdir);
                 continue;
             }
             if (str_equal(p, "harnessdir")) {
@@ -1035,7 +1036,7 @@ void load_config(const char *filename)
             if (str_equal(p, "excludefile")) {
                 char *path = compose_path(base_name, q);
                 namelist_load(&exclude_list, path);
-                free(path);
+                mi_free(path);
                 continue;
             }
             if (str_equal(p, "reportfile")) {
@@ -1060,7 +1061,7 @@ void load_config(const char *filename)
         }
     }
     fclose(f);
-    free(base_name);
+    mi_free(base_name);
 }
 
 char *find_error(const char *filename, int *pline, int is_strict)
@@ -1255,7 +1256,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
                 error_class = strdup_len(msg, strcspn(msg, ":"));
                 if (!str_equal(error_class, error_type))
                     ret = -1;
-                free(error_class);
+                mi_free(error_class);
                 JS_FreeCString(ctx, msg);
             }
         } else {
@@ -1334,7 +1335,7 @@ static int eval_buf(JSContext *ctx, const char *buf, size_t buf_len,
         }
         JS_FreeValue(ctx, msg_val);
         JS_FreeCString(ctx, msg);
-        free(s);
+        mi_free(s);
     }
     JS_FreeCString(ctx, error_name);
     JS_FreeValue(ctx, exception_val);
@@ -1359,13 +1360,13 @@ static int eval_file(JSContext *ctx, const char *base, const char *p,
         warning("error evaluating %s", filename);
         goto fail;
     }
-    free(buf);
-    free(filename);
+    mi_free(buf);
+    mi_free(filename);
     return 0;
 
 fail:
-    free(buf);
-    free(filename);
+    mi_free(buf);
+    mi_free(filename);
     return 1;
 }
 
@@ -1387,7 +1388,7 @@ char *extract_desc(const char *buf, char style)
                 return NULL;
             }
             len = p - desc_start;
-            desc = malloc(len + 1);
+            desc = mi_malloc(len + 1);
             memcpy(desc, desc_start, len);
             desc[len] = '\0';
             return desc;
@@ -1456,18 +1457,18 @@ void update_stats(JSRuntime *rt, const char *filename) {
     JS_ComputeMemoryUsage(rt, &stats);
     if (stats_count++ == 0) {
         stats_avg = stats_all = stats_min = stats_max = stats;
-        stats_min_filename = strdup(filename);
-        stats_max_filename = strdup(filename);
+        stats_min_filename = mi_strdup(filename);
+        stats_max_filename = mi_strdup(filename);
     } else {
         if (stats_max.malloc_size < stats.malloc_size) {
             stats_max = stats;
-            free(stats_max_filename);
-            stats_max_filename = strdup(filename);
+            mi_free(stats_max_filename);
+            stats_max_filename = mi_strdup(filename);
         }
         if (stats_min.malloc_size > stats.malloc_size) {
             stats_min = stats;
-            free(stats_min_filename);
-            stats_min_filename = strdup(filename);
+            mi_free(stats_min_filename);
+            stats_min_filename = mi_strdup(filename);
         }
 
 #define update(f)  stats_avg.f = (stats_all.f += stats.f) / stats_count
@@ -1601,7 +1602,7 @@ int run_test(const char *filename, int index)
                     } else {
                         namelist_add(ip, NULL, ifile);
                     }
-                    free(ifile);
+                    mi_free(ifile);
                 }
             }
             p = find_tag(desc, "flags:", &state);
@@ -1627,7 +1628,7 @@ int run_test(const char *filename, int index)
                     else if (str_equal(option, "CanBlockIsFalse")) {
                         can_block = FALSE;
                     }
-                    free(option);
+                    mi_free(option);
                 }
             }
             p = find_tag(desc, "negative:", &state);
@@ -1654,10 +1655,10 @@ int run_test(const char *filename, int index)
                         printf("%s:%d: unknown feature: %s\n", filename, 1, option);
                         skip |= 1;
                     }
-                    free(option);
+                    mi_free(option);
                 }
             }
-            free(desc);
+            mi_free(desc);
         }
         if (is_async)
             namelist_add(ip, NULL, "doneprintHandle.js");
@@ -1685,7 +1686,7 @@ int run_test(const char *filename, int index)
             } else {
                 namelist_add(ip, NULL, ifile);
             }
-            free(ifile);
+            mi_free(ifile);
         }
 
         /* locate the old style configuration comment */
@@ -1703,7 +1704,7 @@ int run_test(const char *filename, int index)
                 /* XXX: should extract the regex to check error type */
                 is_negative = TRUE;
             }
-            free(desc);
+            mi_free(desc);
         }
     }
 
@@ -1784,8 +1785,8 @@ int run_test(const char *filename, int index)
         }
     }
     namelist_free(&include_list);
-    free(error_type);
-    free(buf);
+    mi_free(error_type);
+    mi_free(buf);
 
     return ret;
 }
@@ -1847,7 +1848,7 @@ int run_test262_harness_test(const char *filename, BOOL is_module)
             }
         }
     }
-    free(buf);
+    mi_free(buf);
 #ifdef CONFIG_AGENT
     js_agent_free(ctx);
 #endif
@@ -2013,7 +2014,7 @@ int main(int argc, char **argv)
             namelist_add_from_error_file(&test_list, error_file);
         }
         if (update_errors) {
-            free(error_file);
+            mi_free(error_file);
             error_file = NULL;
             error_out = fopen(error_filename, "w");
             if (!error_out) {
@@ -2098,10 +2099,10 @@ int main(int argc, char **argv)
     namelist_free(&test_list);
     namelist_free(&exclude_list);
     namelist_free(&exclude_dir_list);
-    free(harness_dir);
-    free(harness_features);
-    free(harness_exclude);
-    free(error_file);
+    mi_free(harness_dir);
+    mi_free(harness_features);
+    mi_free(harness_exclude);
+    mi_free(error_file);
 
     return 0;
 }

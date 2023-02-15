@@ -33,6 +33,7 @@
 #include <sys/wait.h>
 #endif
 
+#include "mimalloc.h"
 #include "include/quickjs/cutils.h"
 #include "quickjs-libc.h"
 
@@ -88,15 +89,15 @@ void namelist_add(namelist_t *lp, const char *name, const char *short_name,
     if (lp->count == lp->size) {
         size_t newsize = lp->size + (lp->size >> 1) + 4;
         namelist_entry_t *a =
-            realloc(lp->array, sizeof(lp->array[0]) * newsize);
+            mi_realloc(lp->array, sizeof(lp->array[0]) * newsize);
         /* XXX: check for realloc failure */
         lp->array = a;
         lp->size = newsize;
     }
     e =  &lp->array[lp->count++];
-    e->name = strdup(name);
+    e->name = mi_strdup(name);
     if (short_name)
-        e->short_name = strdup(short_name);
+        e->short_name = mi_strdup(short_name);
     else
         e->short_name = NULL;
     e->flags = flags;
@@ -106,10 +107,10 @@ void namelist_free(namelist_t *lp)
 {
     while (lp->count > 0) {
         namelist_entry_t *e = &lp->array[--lp->count];
-        free(e->name);
-        free(e->short_name);
+        mi_free(e->name);
+        mi_free(e->short_name);
     }
-    free(lp->array);
+    mi_free(lp->array);
     lp->array = NULL;
     lp->size = 0;
 }

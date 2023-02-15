@@ -31,6 +31,7 @@
 #include <ctype.h>
 #include <time.h>
 
+#include "vendor/mimalloc/include/mimalloc"
 #include "include/quickjs/cutils.h"
 
 /* define it to be able to test unicode.c */
@@ -67,7 +68,7 @@
 void *mallocz(size_t size)
 {
     void *ptr;
-    ptr = malloc(size);
+    ptr = mi_malloc(size);
     memset(ptr, 0, size);
     return ptr;
 }
@@ -108,7 +109,7 @@ void add_char(int **pbuf, int *psize, int *plen, int c)
     if (len >= size) {
         size = *psize;
         size = max_int(len + 1, size * 3 / 2);
-        buf = realloc(buf, sizeof(buf[0]) * size);
+        buf = mi_realloc(buf, sizeof(buf[0]) * size);
         *pbuf = buf;
         *psize = size;
     }
@@ -841,7 +842,7 @@ void parse_script_extensions(const char *filename)
             for(c = c0; c <= c1; c++) {
                 CCInfo *ci = &unicode_db[c];
                 ci->script_ext_len = script_ext_len;
-                ci->script_ext = malloc(sizeof(ci->script_ext[0]) * script_ext_len);
+                ci->script_ext = mi_malloc(sizeof(ci->script_ext[0]) * script_ext_len);
                 for(i = 0; i < script_ext_len; i++)
                     ci->script_ext[i] = script_ext[i];
             }
@@ -2618,7 +2619,7 @@ void build_decompose_table(FILE *f)
     }
 
     /* build the data buffer */
-    data_buf = malloc(100000);
+    data_buf = mi_malloc(100000);
     data_len = 0;
     array_len = 0;
     for(i = 0; i <= code_max; i++) {
@@ -2698,9 +2699,9 @@ void build_decompose_table(FILE *f)
 
     build_compose_table(f, tab_de);
 
-    free(data_buf);
+    mi_free(data_buf);
     
-    free(tab_de);
+    mi_free(tab_de);
 }
 
 typedef struct {
@@ -2754,7 +2755,7 @@ void build_compose_table(FILE *f, const DecompEntry *tab_de)
     int i, v, tab_ce_len;
     ComposeEntry *ce, *tab_ce;
     
-    tab_ce = malloc(sizeof(*tab_ce) * COMPOSE_LEN_MAX);
+    tab_ce = mi_malloc(sizeof(*tab_ce) * COMPOSE_LEN_MAX);
     tab_ce_len = 0;
     for(i = 0; i <= CHARCODE_MAX; i++) {
         CCInfo *ci = &unicode_db[i];
@@ -2794,7 +2795,7 @@ void build_compose_table(FILE *f, const DecompEntry *tab_de)
     }
     fprintf(f, "\n};\n\n");
     
-    free(tab_ce);
+    mi_free(tab_ce);
 }
 
 #ifdef USE_TEST
@@ -2931,25 +2932,25 @@ void normalization_test(const char *filename)
 
         buf_len = unicode_normalize((uint32_t **)&buf, (uint32_t *)in_str, in_len, UNICODE_NFD, NULL, NULL);
         check_str("nfd", pos, in_str, in_len, buf, buf_len, nfd_str, nfd_len);
-        free(buf);
+        mi_free(buf);
 
         buf_len = unicode_normalize((uint32_t **)&buf, (uint32_t *)in_str, in_len, UNICODE_NFKD, NULL, NULL);
         check_str("nfkd", pos, in_str, in_len, buf, buf_len, nfkd_str, nfkd_len);
-        free(buf);
+        mi_free(buf);
         
         buf_len = unicode_normalize((uint32_t **)&buf, (uint32_t *)in_str, in_len, UNICODE_NFC, NULL, NULL);
         check_str("nfc", pos, in_str, in_len, buf, buf_len, nfc_str, nfc_len);
-        free(buf);
+        mi_free(buf);
 
         buf_len = unicode_normalize((uint32_t **)&buf, (uint32_t *)in_str, in_len, UNICODE_NFKC, NULL, NULL);
         check_str("nfkc", pos, in_str, in_len, buf, buf_len, nfkc_str, nfkc_len);
-        free(buf);
+        mi_free(buf);
 
-        free(in_str);
-        free(nfc_str);
-        free(nfd_str);
-        free(nfkc_str);
-        free(nfkd_str);
+        mi_free(in_str);
+        mi_free(nfc_str);
+        mi_free(nfd_str);
+        mi_free(nfkc_str);
+        mi_free(nfkd_str);
     }
     fclose(f);
 }

@@ -67,6 +67,7 @@ typedef sig_t sighandler_t;
 #include <stdatomic.h>
 #endif
 
+#include "mimalloc.h"
 #include "include/quickjs/cutils.h"
 #include "include/quickjs/list.h"
 #include "quickjs-libc.h"
@@ -384,7 +385,7 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
     if (ctx)
         buf = js_malloc(ctx, buf_len + 1);
     else
-        buf = malloc(buf_len + 1);
+        buf = mi_malloc(buf_len + 1);
     if (!buf)
         goto fail;
     if (fread(buf, 1, buf_len, f) != buf_len) {
@@ -392,7 +393,7 @@ uint8_t *js_load_file(JSContext *ctx, size_t *pbuf_len, const char *filename)
         if (ctx)
             js_free(ctx, buf);
         else
-            free(buf);
+            mi_free(buf);
     fail:
         fclose(f);
         return NULL;
@@ -535,7 +536,7 @@ int js_module_set_import_meta(JSContext *ctx, JSValueConst func_val,
            because the corresponding module source code is not
            necessarily present */
         if (use_realpath) {
-            char *res = realpath(module_name, buf + strlen(buf));
+            char *res = mi_realpath(module_name, buf + strlen(buf));
             if (!res) {
                 JS_ThrowTypeError(ctx, "realpath failure");
                 JS_FreeCString(ctx, module_name);
@@ -630,13 +631,13 @@ static void setenv(const char *name, const char *value, int overwrite)
     size_t name_len, value_len;
     name_len = strlen(name);
     value_len = strlen(value);
-    str = malloc(name_len + 1 + value_len + 1);
+    str = mi_malloc(name_len + 1 + value_len + 1);
     memcpy(str, name, name_len);
     str[name_len] = '=';
     memcpy(str + name_len + 1, value, value_len);
     str[name_len + 1 + value_len] = '\0';
     _putenv(str);
-    free(str);
+    mi_free(str);
 }
 
 static void unsetenv(const char *name)
@@ -2639,7 +2640,7 @@ static JSValue js_os_sleep(JSContext *ctx, JSValueConst this_val,
 }
 
 #if defined(_WIN32)
-static char *realpath(const char *path, char *buf)
+static char *mi_realpath(const char *path, char *buf)
 {
     if (!_fullpath(buf, path, PATH_MAX)) {
         errno = ENOENT;
@@ -2661,7 +2662,7 @@ static JSValue js_os_realpath(JSContext *ctx, JSValueConst this_val,
     path = JS_ToCString(ctx, argv[0]);
     if (!path)
         return JS_EXCEPTION;
-    res = realpath(path, buf);
+    res = mi_realpath(path, buf);
     JS_FreeCString(ctx, path);
     if (!res) {
         buf[0] = '\0';
@@ -3153,7 +3154,7 @@ static int atomic_add_int(int *ptr, int v)
 static void *js_sab_alloc(void *opaque, size_t size)
 {
     JSSABHeader *sab;
-    sab = malloc(sizeof(JSSABHeader) + size);
+    sab = mi_malloc(sizeof(JSSABHeader) + size);
     if (!sab)
         return NULL;
     sab->ref_count = 1;
@@ -3168,7 +3169,7 @@ static void js_sab_free(void *opaque, void *ptr)
     ref_count = atomic_add_int(&sab->ref_count, -1);
     assert(ref_count >= 0);
     if (ref_count == 0) {
-        free(sab);
+        mi_free(sab);
     }
 }
 
@@ -3187,7 +3188,7 @@ static JSWorkerMessagePipe *js_new_message_pipe(void)
     if (pipe(pipe_fds) < 0)
         return NULL;
 
-    ps = malloc(sizeof(*ps));
+    ps = mi_malloc(sizeof(*ps));
     if (!ps) {
         close(pipe_fds[0]);
         close(pipe_fds[1]);
@@ -3214,9 +3215,9 @@ static void js_free_message(JSWorkerMessage *msg)
     for(i = 0; i < msg->sab_tab_len; i++) {
         js_sab_free(NULL, msg->sab_tab[i]);
     }
-    free(msg->sab_tab);
-    free(msg->data);
-    free(msg);
+    mi_free(msg->sab_tab);
+    mi_free(msg->data);
+    mi_free(msg);
 }
 
 static void js_free_message_pipe(JSWorkerMessagePipe *ps)
@@ -3238,7 +3239,7 @@ static void js_free_message_pipe(JSWorkerMessagePipe *ps)
         pthread_mutex_destroy(&ps->mutex);
         close(ps->read_fd);
         close(ps->write_fd);
-        free(ps);
+        mi_free(ps);
     }
 }
 
@@ -3302,9 +3303,9 @@ static void *worker_func(void *opaque)
 
     if (!JS_RunModule(ctx, args->basename, args->filename))
         js_std_dump_error(ctx);
-    free(args->filename);
-    free(args->basename);
-    free(args);
+    mi_free(args->filename);
+    mi_free(args->basename);
+    mi_free(args);
 
     js_std_loop(ctx);
 
@@ -3379,12 +3380,12 @@ static JSValue js_worker_ctor(JSContext *ctx, JSValueConst new_target,
     if (!filename)
         goto fail;
 
-    args = malloc(sizeof(*args));
+    args = mi_malloc(sizeof(*args));
     if (!args)
         goto oom_fail;
     memset(args, 0, sizeof(*args));
-    args->filename = strdup(filename);
-    args->basename = strdup(basename);
+    args->filename = mi_strdup(filename);
+    args->basename = mi_strdup(basename);
 
     /* ports */
     args->recv_pipe = js_new_message_pipe();
@@ -3417,11 +3418,11 @@ static JSValue js_worker_ctor(JSContext *ctx, JSValueConst new_target,
     JS_FreeCString(ctx, basename);
     JS_FreeCString(ctx, filename);
     if (args) {
-        free(args->filename);
-        free(args->basename);
+        mi_free(args->filename);
+        mi_free(args->basename);
         js_free_message_pipe(args->recv_pipe);
         js_free_message_pipe(args->send_pipe);
-        free(args);
+        mi_free(args);
     }
     JS_FreeValue(ctx, obj);
     return JS_EXCEPTION;
@@ -3446,20 +3447,20 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
     if (!data)
         return JS_EXCEPTION;
 
-    msg = malloc(sizeof(*msg));
+    msg = mi_malloc(sizeof(*msg));
     if (!msg)
         goto fail;
     msg->data = NULL;
     msg->sab_tab = NULL;
 
     /* must reallocate because the allocator may be different */
-    msg->data = malloc(data_len);
+    msg->data = mi_malloc(data_len);
     if (!msg->data)
         goto fail;
     memcpy(msg->data, data, data_len);
     msg->data_len = data_len;
 
-    msg->sab_tab = malloc(sizeof(msg->sab_tab[0]) * sab_tab_len);
+    msg->sab_tab = mi_malloc(sizeof(msg->sab_tab[0]) * sab_tab_len);
     if (!msg->sab_tab)
         goto fail;
     memcpy(msg->sab_tab, sab_tab, sizeof(msg->sab_tab[0]) * sab_tab_len);
@@ -3492,9 +3493,9 @@ static JSValue js_worker_postMessage(JSContext *ctx, JSValueConst this_val,
     return JS_UNDEFINED;
  fail:
     if (msg) {
-        free(msg->data);
-        free(msg->sab_tab);
-        free(msg);
+        mi_free(msg->data);
+        mi_free(msg->sab_tab);
+        mi_free(msg);
     }
     js_free(ctx, data);
     js_free(ctx, sab_tab);
@@ -3768,7 +3769,7 @@ void js_std_init_handlers(JSRuntime *rt)
 {
     JSThreadState *ts;
 
-    ts = malloc(sizeof(*ts));
+    ts = mi_malloc(sizeof(*ts));
     if (!ts) {
         fprintf(stderr, "Could not allocate memory for the worker");
         exit(1);
@@ -3822,7 +3823,7 @@ void js_std_free_handlers(JSRuntime *rt)
     js_free_message_pipe(ts->send_pipe);
 #endif
 
-    free(ts);
+    mi_free(ts);
     JS_SetRuntimeOpaque(rt, NULL); /* fail safe */
 }
 

@@ -1,4 +1,4 @@
 [submodule "vendor/mimalloc"]
 	path = vendor/mimalloc
 	url = https://github.com/microsoft/mimalloc
-	branch = v2.0.9
+	branch = v1.7.9

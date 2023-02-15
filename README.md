@@ -11,9 +11,10 @@ In addition to the relevant features and optimizations in the [TODO](https://git
 
 - [x] Column number
 - [ ] Basic Debugger API
-- [ ] Poly IC
+- [x] Poly IC
   - [x] Self Poly IC
   - [ ] Prototype Poly IC 
+- [x] Replace malloc To [mimalloc](https://github.com/microsoft/mimalloc)
 - [ ] Improve The Performance Of GC
 
 In our plan, we first complete the above optimizations and then gradually add the remaining parts.

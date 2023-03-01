@@ -40,3 +40,15 @@ It will output result like:
 ```
 Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 ```
+
+### Benchmark
+
+|               | bellard/quickjs (2788d71)    | openwebf/quickjs (latest)       |
+| ------------- | ---------- | ---------- |
+| Richards      | 1188        | 1320       |
+| Crypto        | 1443        | 1413       |
+| RayTrace      | 744        | 1990       |
+| NavierStokes  | 2775        | 2775       |
+| DeltaBlue     | 1100        | 1402       |
+| Total score   | 1312        | 1706 (+30.03%)      |
+| File Size(KB) | 1.3M        | 1.4M        |

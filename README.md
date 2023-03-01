@@ -43,6 +43,10 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 
 ### Benchmark
 
+> - Apple M1 Pro
+> - macOS Monterey 12.2.1
+> - Clang 13.0.0 arm64-apple-darwin21.3.0
+
 |               | bellard/quickjs (2788d71)    | openwebf/quickjs (latest)       |
 | ------------- | ---------- | ---------- |
 | Richards      | 1188        | 1320       |

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.9.4)
 project(QUICKJS)
 set(C_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(MI_OVERRIDE OFF)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)

@@ -160,6 +160,7 @@ typedef struct {
 
 typedef enum {
     JS_RUNTIME_STATE_INIT,
+    JS_RUNTIME_STATE_RUNNING,
     JS_RUNTIME_STATE_SHUTDOWN,
 } JSRuntimeState;
 

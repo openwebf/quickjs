@@ -1988,7 +1988,7 @@ force_inline int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_
   p = JS_VALUE_GET_OBJ(this_obj);
   offset = get_ic_prop_offset(ic, offset, p->shape, &proto);
   if (likely(offset >= 0)) {
-    if (!proto)
+    if (proto)
       goto slow_path;
     set_value(ctx, &p->prop[offset].u.value, val);
     return TRUE;

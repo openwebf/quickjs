@@ -35,10 +35,10 @@ int rebuild_ic(InlineCache *ic);
 int resize_ic_hash(InlineCache *ic);
 int free_ic(InlineCache *ic);
 uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
-                     uint32_t prop_offset);
+                     uint32_t prop_offset, JSObject* prototype);
 uint32_t add_ic_slot1(InlineCache *ic, JSAtom atom);
 force_inline int32_t get_ic_prop_offset(InlineCache *ic, uint32_t cache_offset,
-                                        JSShape *shape) {
+                                        JSShape *shape, JSObject **prototype) {
   uint32_t i;
   InlineCacheRingSlot *cr;
   InlineCacheRingItem *buffer;
@@ -49,6 +49,7 @@ force_inline int32_t get_ic_prop_offset(InlineCache *ic, uint32_t cache_offset,
     buffer = cr->buffer + i;
     if (likely(buffer->shape == shape)) {
       cr->index = i;
+      *prototype = buffer->proto;
       return buffer->prop_offset;
     }
 
@@ -58,11 +59,17 @@ force_inline int32_t get_ic_prop_offset(InlineCache *ic, uint32_t cache_offset,
     }
   }
 
+  *prototype = NULL;
   return -1;
 }
+
 force_inline JSAtom get_ic_atom(InlineCache *ic, uint32_t cache_offset) {
   assert(cache_offset < ic->capacity);
   return ic->cache[cache_offset].atom;
 }
 
+int ic_watchpoint_remove_callback(JSRuntime* rt, intptr_t ref, void* extra_data, void* target);
+int ic_watchpoint_clear_callback(JSRuntime* rt, intptr_t ref, void* extra_data);
+int ic_remove_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom);
+int ic_clear_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape);
 #endif

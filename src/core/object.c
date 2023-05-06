@@ -162,8 +162,9 @@ JSValue JS_GetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* pro
    error. */
 JSProperty* add_property(JSContext* ctx, JSObject* p, JSAtom prop, int prop_flags) {
   JSShape *sh, *new_sh;
-
   sh = p->shape;
+  if (ic_remove_shape_proto_watchpoints(ctx->rt, sh, prop))
+    return NULL;
   if (sh->is_hashed) {
     /* try to find an existing shape */
     new_sh = find_hashed_shape_prop(ctx->rt, sh, prop, prop_flags);
@@ -463,7 +464,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
         // basic poly ic is only used for fast path
         if (ic != NULL && proto_depth == 0 && p->shape->is_hashed) {
           ic->updated = TRUE;
-          ic->updated_offset = add_ic_slot(ic, prop, p, offset);
+          ic->updated_offset = add_ic_slot(ic, prop, p, offset, NULL);
         }
         return JS_DupValue(ctx, pr->u.value);
       }
@@ -545,14 +546,17 @@ force_inline JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst o
                                BOOL throw_ref_error) 
 {
   uint32_t tag;
-  JSObject *p;
+  JSObject *p, *proto;
   tag = JS_VALUE_GET_TAG(obj);
   if (unlikely(tag != JS_TAG_OBJECT))
     goto slow_path;
   p = JS_VALUE_GET_OBJ(obj);
-  offset = get_ic_prop_offset(ic, offset, p->shape);
-  if (likely(offset >= 0))
+  offset = get_ic_prop_offset(ic, offset, p->shape, &proto);
+  if (likely(offset >= 0)) {
+    if (proto)
+      p = proto;
     return JS_DupValue(ctx, p->prop[offset].u.value);
+  }
 slow_path:
   return JS_GetPropertyInternal(ctx, obj, prop, this_obj, ic, throw_ref_error);      
 }
@@ -1802,7 +1806,7 @@ retry:
       /* fast case */
       if (ic != NULL && p->shape->is_hashed) {
         ic->updated = TRUE;
-        ic->updated_offset = add_ic_slot(ic, prop, p, offset);
+        ic->updated_offset = add_ic_slot(ic, prop, p, offset, NULL);
       }
       set_value(ctx, &pr->u.value, val);
       return TRUE;
@@ -1977,13 +1981,15 @@ retry:
 
 force_inline int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
   uint32_t tag;
-  JSObject *p;
+  JSObject *p, *proto;
   tag = JS_VALUE_GET_TAG(this_obj);
   if (unlikely(tag != JS_TAG_OBJECT))
     goto slow_path;
   p = JS_VALUE_GET_OBJ(this_obj);
-  offset = get_ic_prop_offset(ic, offset, p->shape);
+  offset = get_ic_prop_offset(ic, offset, p->shape, &proto);
   if (likely(offset >= 0)) {
+    if (!proto)
+      goto slow_path;
     set_value(ctx, &p->prop[offset].u.value, val);
     return TRUE;
   }

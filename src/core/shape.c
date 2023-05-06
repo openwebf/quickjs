@@ -134,6 +134,7 @@ no_inline JSShape* js_new_shape2(JSContext* ctx, JSObject* proto, int hash_size,
   sh->hash = shape_initial_hash(proto);
   sh->is_hashed = TRUE;
   sh->has_small_array_index = FALSE;
+  sh->watchpoint = NULL;
   js_shape_hash_link(ctx->rt, sh);
   return sh;
 }
@@ -162,6 +163,7 @@ JSShape* js_clone_shape(JSContext* ctx, JSShape* sh1) {
   sh->header.ref_count = 1;
   add_gc_object(ctx->rt, &sh->header, JS_GC_OBJ_TYPE_SHAPE);
   sh->is_hashed = FALSE;
+  sh->watchpoint = NULL;
   if (sh->proto) {
     JS_DupValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
   }
@@ -183,9 +185,9 @@ void js_free_shape0(JSRuntime* rt, JSShape* sh) {
   assert(sh->header.ref_count == 0);
   if (sh->is_hashed)
     js_shape_hash_unlink(rt, sh);
-  if (sh->proto != NULL) {
+  if (sh->proto != NULL)
     JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
-  }
+  js_shape_clear_watchpoints(rt, sh);
   pr = get_shape_prop(sh);
   for (i = 0; i < sh->prop_count; i++) {
     JS_FreeAtomRT(rt, pr->atom);
@@ -584,4 +586,62 @@ int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs)
     }
   }
   return 0;
+}
+
+int js_shape_remove_watchpoints(JSRuntime *rt, JSShape *sh, void* target) {
+  ObjectWatchpoint *o, *watchpoint;
+  watchpoint = sh->watchpoint;
+  while(watchpoint) {
+    o = watchpoint->next;
+    if (watchpoint->remove_callback) {
+      if (!watchpoint->remove_callback(rt, watchpoint->ref, watchpoint->extra_data, target)) {
+        if (o)
+          o->prev = watchpoint->prev;
+        if(watchpoint->prev)
+          watchpoint->prev->next = o;
+        else
+          sh->watchpoint = NULL;
+        js_free_rt(rt, watchpoint);
+      }
+    }
+    watchpoint = o;
+  }
+  return 0;
+}
+
+int js_shape_clear_watchpoints(JSRuntime* rt, JSShape *sh) {
+  ObjectWatchpoint *o, *watchpoint;
+  if (!sh || !sh->watchpoint)
+    goto end;
+  watchpoint = sh->watchpoint;
+  sh->watchpoint = NULL;
+  while(watchpoint) {
+    o = watchpoint;
+    watchpoint = o->next;
+    if (o->clear_callback) {
+      o->clear_callback(rt, o->ref, o->extra_data);
+      js_free_rt(rt, o);
+    }
+  }
+end:
+  return 0;
+}
+
+ObjectWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *sh, intptr_t ptr, void *extra_data,
+                             watchpoint_remove_callback *remove_callback,
+                             watchpoint_clear_callback *clear_callback) {
+  ObjectWatchpoint *o;
+  o = (ObjectWatchpoint *)js_malloc_rt(rt, sizeof(ObjectWatchpoint));
+  if(unlikely(!o))
+    return NULL;
+  o->ref = ptr;
+  o->extra_data = extra_data;
+  o->remove_callback = remove_callback;
+  o->clear_callback = clear_callback;
+  if (sh->watchpoint)
+    sh->watchpoint->prev = o;
+  o->prev = NULL;
+  o->next = sh->watchpoint;
+  sh->watchpoint = o;
+  return o;
 }

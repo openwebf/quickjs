@@ -70,6 +70,6 @@ force_inline JSAtom get_ic_atom(InlineCache *ic, uint32_t cache_offset) {
 
 int ic_watchpoint_delete_handler(JSRuntime* rt, intptr_t ref, void* extra_data, void* target);
 int ic_watchpoint_free_handler(JSRuntime* rt, intptr_t ref, void* extra_data);
-int ic_remove_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom);
-int ic_clear_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape);
+int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom);
+int ic_free_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape);
 #endif

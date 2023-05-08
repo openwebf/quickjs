@@ -163,7 +163,7 @@ JSValue JS_GetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* pro
 JSProperty* add_property(JSContext* ctx, JSObject* p, JSAtom prop, int prop_flags) {
   JSShape *sh, *new_sh;
   sh = p->shape;
-  if (ic_remove_shape_proto_watchpoints(ctx->rt, sh, prop))
+  if (ic_delete_shape_proto_watchpoints(ctx->rt, sh, prop))
     return NULL;
   if (sh->is_hashed) {
     /* try to find an existing shape */

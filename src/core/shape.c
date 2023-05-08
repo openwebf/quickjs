@@ -590,6 +590,8 @@ int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs)
 
 int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *sh, void* target) {
   ObjectWatchpoint *o, *watchpoint;
+  if (!sh || !sh->watchpoint)
+    goto end;
   watchpoint = sh->watchpoint;
   while(watchpoint) {
     o = watchpoint->next;
@@ -600,12 +602,13 @@ int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *sh, void* target) {
         if(watchpoint->prev)
           watchpoint->prev->next = o;
         else
-          sh->watchpoint = NULL;
+          sh->watchpoint = o;
         js_free_rt(rt, watchpoint);
       }
     }
     watchpoint = o;
   }
+end:
   return 0;
 }
 

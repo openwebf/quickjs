@@ -153,8 +153,11 @@ uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
   assert(cr != NULL);
   i = cr->index;
   for (;;) {
-    if (object->shape == cr->buffer[i].shape)
-      break;
+    ci = cr->buffer + i;
+    if (object->shape == ci->shape && prototype == ci->proto) {
+      ci->prop_offset = prop_offset;
+      goto end;
+    }
 
     i = (i + 1) % IC_CACHE_ITEM_CAPACITY;
     if (unlikely(i == cr->index))
@@ -170,13 +173,15 @@ uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
   ci->shape = js_dup_shape(object->shape);
   js_free_shape_null(rt, sh);
   if (prototype) {
-    // the prototype SHOULE BE freed by watchpoint_remove/clear_callback
+    // the atom and prototype SHOULE BE freed by watchpoint_remove/clear_callback
     JS_DupValue(ic->ctx, JS_MKPTR(JS_TAG_OBJECT, prototype));
     ci->proto = prototype;
-    ci->watchpoint_ref = js_shape_create_watchpoint(rt, ci->shape, (intptr_t)ci, NULL,
+    ci->watchpoint_ref = js_shape_create_watchpoint(rt, ci->shape, (intptr_t)ci, 
+                          JS_DupAtom(ic->ctx, atom),
                           ic_watchpoint_delete_handler,
                           ic_watchpoint_free_handler);
   }
+end:
   return ch->index;
 }
 
@@ -201,17 +206,16 @@ end:
   return 0;
 }
 
-int ic_watchpoint_delete_handler(JSRuntime* rt, intptr_t ref, void* extra_data, void* target) {
+int ic_watchpoint_delete_handler(JSRuntime* rt, intptr_t ref, JSAtom atom, void* target) {
   InlineCacheRingItem *ci;
-  JSAtom *atom;
   ci = (InlineCacheRingItem *)ref;
-  atom = (JSAtom *)extra_data;
   if(ref != (intptr_t)target)
     return 1;
   assert(ci->proto != NULL);
   // the shape and prop_offset WILL BE handled by add_ic_slot
   // !!! MUST NOT CALL js_free_shape0 TO DOUBLE FREE HERE !!!
   JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, ci->proto));
+  JS_FreeAtomRT(rt, atom);
   ci->watchpoint_ref = NULL;
   ci->proto = NULL;
   ci->prop_offset = 0;
@@ -219,15 +223,15 @@ int ic_watchpoint_delete_handler(JSRuntime* rt, intptr_t ref, void* extra_data, 
   return 0;
 }
 
-int ic_watchpoint_free_handler(JSRuntime* rt, intptr_t ref, void* extra_data) {
+int ic_watchpoint_free_handler(JSRuntime* rt, intptr_t ref, JSAtom atom) {
   InlineCacheRingItem *ci;
-  JSAtom *atom;
   ci = (InlineCacheRingItem *)ref;
   assert(ci->watchpoint_ref != NULL);
   assert(ci->proto != NULL);
   // the watchpoint_clear_callback ONLY CAN BE called by js_free_shape0
   // !!! MUST NOT CALL js_free_shape0 TO DOUBLE FREE HERE !!!
   JS_FreeValueRT(rt, JS_MKPTR(JS_TAG_OBJECT, ci->proto));
+  JS_FreeAtomRT(rt, atom);
   ci->watchpoint_ref = NULL;
   ci->proto = NULL;
   ci->prop_offset = 0;
@@ -236,7 +240,7 @@ int ic_watchpoint_free_handler(JSRuntime* rt, intptr_t ref, void* extra_data) {
 }
 
 int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom) {
-  ObjectWatchpoint *o, *watchpoint;
+  ICWatchpoint *o, *watchpoint;
   JSObject *p;
   JSAtom *prop;
   InlineCacheRingItem *ci;
@@ -245,13 +249,12 @@ int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom
     watchpoint = p->shape->watchpoint;
     while(watchpoint) {
       o = watchpoint->next;
-      prop = (JSAtom *)watchpoint->extra_data;
-      if(atom == *prop) {
+      if(atom == watchpoint->atom) {
         ci = (InlineCacheRingItem *)watchpoint->ref;
         shape = ci->shape;
         watchpoint->delete_callback = NULL;
         watchpoint->free_callback = NULL;
-        ic_watchpoint_free_handler(rt, watchpoint->ref, watchpoint->extra_data);
+        ic_watchpoint_free_handler(rt, watchpoint->ref, watchpoint->atom);
         js_free_shape_null(rt, shape);
         if (o)
           o->prev = watchpoint->prev;
@@ -269,7 +272,7 @@ int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom
 }
 
 int ic_free_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape) {
-  ObjectWatchpoint *o, *watchpoint;
+  ICWatchpoint *o, *watchpoint;
   JSObject *p;
   JSAtom *prop;
   InlineCacheRingItem *ci;
@@ -280,12 +283,11 @@ int ic_free_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape) {
     while(watchpoint) {
       o = watchpoint;
       watchpoint = o->next;
-      prop = (JSAtom *)o->extra_data;
       ci = (InlineCacheRingItem *)o->ref;
       shape = ci->shape;
       o->delete_callback = NULL;
       o->free_callback = NULL;
-      ic_watchpoint_free_handler(rt, o->ref, o->extra_data);
+      ic_watchpoint_free_handler(rt, o->ref, o->atom);
       js_free_shape_null(rt, shape);
       js_free_rt(rt, o);
     }

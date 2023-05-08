@@ -589,14 +589,14 @@ int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs)
 }
 
 int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *sh, void* target) {
-  ObjectWatchpoint *o, *watchpoint;
+  ICWatchpoint *o, *watchpoint;
   if (!sh || !sh->watchpoint)
     goto end;
   watchpoint = sh->watchpoint;
   while(watchpoint) {
     o = watchpoint->next;
     if (watchpoint->delete_callback) {
-      if (!watchpoint->delete_callback(rt, watchpoint->ref, watchpoint->extra_data, target)) {
+      if (!watchpoint->delete_callback(rt, watchpoint->ref, watchpoint->atom, target)) {
         if (o)
           o->prev = watchpoint->prev;
         if(watchpoint->prev)
@@ -613,7 +613,7 @@ end:
 }
 
 int js_shape_free_watchpoints(JSRuntime* rt, JSShape *sh) {
-  ObjectWatchpoint *o, *watchpoint;
+  ICWatchpoint *o, *watchpoint;
   if (!sh || !sh->watchpoint)
     goto end;
   watchpoint = sh->watchpoint;
@@ -622,7 +622,7 @@ int js_shape_free_watchpoints(JSRuntime* rt, JSShape *sh) {
     o = watchpoint;
     watchpoint = o->next;
     if (o->free_callback) {
-      o->free_callback(rt, o->ref, o->extra_data);
+      o->free_callback(rt, o->ref, o->atom);
       js_free_rt(rt, o);
     }
   }
@@ -630,15 +630,15 @@ end:
   return 0;
 }
 
-ObjectWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *sh, intptr_t ptr, void *extra_data,
+ICWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *sh, intptr_t ptr, JSAtom atom,
                              watchpoint_delete_callback *remove_callback,
                              watchpoint_free_callback *clear_callback) {
-  ObjectWatchpoint *o;
-  o = (ObjectWatchpoint *)js_malloc_rt(rt, sizeof(ObjectWatchpoint));
+  ICWatchpoint *o;
+  o = (ICWatchpoint *)js_malloc_rt(rt, sizeof(ICWatchpoint));
   if(unlikely(!o))
     return NULL;
   o->ref = ptr;
-  o->extra_data = extra_data;
+  o->atom = atom;
   o->delete_callback = remove_callback;
   o->free_callback = clear_callback;
   if (sh->watchpoint)

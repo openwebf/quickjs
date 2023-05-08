@@ -391,7 +391,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
                                JSAtom prop, JSValueConst this_obj,
                                InlineCache *ic, BOOL throw_ref_error)
 {
-  JSObject *p;
+  JSObject *p, *p1;
   JSProperty *pr;
   JSShapeProperty *prs;
   uint32_t tag, offset, proto_depth;
@@ -435,6 +435,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
     p = JS_VALUE_GET_OBJ(obj);
   }
 
+  p1 = p;
   for(;;) {
     prs = find_own_property_ic(&pr, p, prop, &offset);
     if (prs) {
@@ -462,9 +463,9 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
         }
       } else {
         // basic poly ic is only used for fast path
-        if (ic != NULL && proto_depth == 0 && p->shape->is_hashed) {
+        if (ic && p->shape->is_hashed) {
           ic->updated = TRUE;
-          ic->updated_offset = add_ic_slot(ic, prop, p, offset, NULL);
+          ic->updated_offset = add_ic_slot(ic, prop, p1, offset, proto_depth > 0 ? p : NULL);
         }
         return JS_DupValue(ctx, pr->u.value);
       }
@@ -1804,7 +1805,7 @@ retry:
   if (prs) {
     if (likely((prs->flags & (JS_PROP_TMASK | JS_PROP_WRITABLE | JS_PROP_LENGTH)) == JS_PROP_WRITABLE)) {
       /* fast case */
-      if (ic != NULL && p->shape->is_hashed) {
+      if (ic && p->shape->is_hashed) {
         ic->updated = TRUE;
         ic->updated_offset = add_ic_slot(ic, prop, p, offset, NULL);
       }

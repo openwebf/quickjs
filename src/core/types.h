@@ -528,8 +528,7 @@ typedef struct ICWatchpoint {
     JSAtom atom;
     watchpoint_delete_callback *delete_callback;
     watchpoint_free_callback *free_callback;
-    struct ICWatchpoint *prev;
-    struct ICWatchpoint *next;
+    struct list_head link;
 } ICWatchpoint;
 
 typedef struct InlineCacheRingItem {
@@ -844,7 +843,7 @@ struct JSShape {
     int deleted_prop_count;
     JSShape *shape_hash_next; /* in JSRuntime.shape_hash[h] list */
     JSObject *proto;
-    ICWatchpoint *watchpoint;
+    struct list_head *watchpoint;
     JSShapeProperty prop[0]; /* prop_size elements */
 };
 

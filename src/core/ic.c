@@ -102,17 +102,24 @@ fail:
 int free_ic(InlineCache *ic) {
   uint32_t i, j;
   JSRuntime *rt;
+  JSShape *sh;
   InlineCacheHashSlot *ch, *ch_next;
   InlineCacheRingItem *buffer;
-  JSShape *shape;
+  ICWatchpoint *o;
   rt = ic->ctx->rt;
   for (i = 0; i < ic->count; i++) {
     buffer = ic->cache[i].buffer;
     JS_FreeAtom(ic->ctx, ic->cache[i].atom);
     for (j = 0; j < IC_CACHE_ITEM_CAPACITY; j++) {
-      shape = buffer[j].shape;
-      js_shape_free_watchpoints(rt, shape);
-      js_free_shape_null(rt, shape);
+      sh = buffer[j].shape;
+      o = buffer[j].watchpoint_ref;
+      if (o) {
+        if (o->free_callback)
+          o->free_callback(rt, o->ref, o->atom);
+        list_del(&o->link);
+        js_free_rt(rt, o);
+      }
+      js_free_shape_null(rt, sh);
     }
   }
   for (i = 0; i < ic->capacity; i++) {
@@ -240,57 +247,50 @@ int ic_watchpoint_free_handler(JSRuntime* rt, intptr_t ref, JSAtom atom) {
 }
 
 int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom) {
-  ICWatchpoint *o, *watchpoint;
+  struct list_head *el, *el1;
   JSObject *p;
   JSAtom *prop;
   InlineCacheRingItem *ci;
   p = shape->proto;
   while(p) {
-    watchpoint = p->shape->watchpoint;
-    while(watchpoint) {
-      o = watchpoint->next;
-      if(atom == watchpoint->atom) {
-        ci = (InlineCacheRingItem *)watchpoint->ref;
-        shape = ci->shape;
-        watchpoint->delete_callback = NULL;
-        watchpoint->free_callback = NULL;
-        ic_watchpoint_free_handler(rt, watchpoint->ref, watchpoint->atom);
-        js_free_shape_null(rt, shape);
-        if (o)
-          o->prev = watchpoint->prev;
-        if (watchpoint->prev)
-          watchpoint->prev->next = o;
-        else
-          p->shape->watchpoint = o;
-        js_free_rt(rt, watchpoint);
+    if (p->shape->watchpoint)
+      list_for_each_safe(el, el1, p->shape->watchpoint) {
+        ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
+        if (o->atom == atom) {
+          ci = (InlineCacheRingItem *)o->ref;
+          shape = ci->shape;
+          o->delete_callback = NULL;
+          o->free_callback = NULL;
+          ic_watchpoint_free_handler(rt, o->ref, o->atom);
+          js_free_shape_null(rt, shape);
+          list_del(el);
+          js_free_rt(rt, o);
+        }
       }
-      watchpoint = o;
-    }
     p = p->shape->proto;
   }
   return 0;
 }
 
 int ic_free_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape) {
-  ICWatchpoint *o, *watchpoint;
+  struct list_head *el, *el1;
   JSObject *p;
   JSAtom *prop;
   InlineCacheRingItem *ci;
   p = shape->proto;
   while(p) {
-    watchpoint = p->shape->watchpoint;
-    p->shape->watchpoint = NULL;
-    while(watchpoint) {
-      o = watchpoint;
-      watchpoint = o->next;
-      ci = (InlineCacheRingItem *)o->ref;
-      shape = ci->shape;
-      o->delete_callback = NULL;
-      o->free_callback = NULL;
-      ic_watchpoint_free_handler(rt, o->ref, o->atom);
-      js_free_shape_null(rt, shape);
-      js_free_rt(rt, o);
-    }
+    if (p->shape->watchpoint)
+      list_for_each_safe(el, el1, p->shape->watchpoint) {
+        ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
+        ci = (InlineCacheRingItem *)o->ref;
+        shape = ci->shape;
+        o->delete_callback = NULL;
+        o->free_callback = NULL;
+        ic_watchpoint_free_handler(rt, o->ref, o->atom);
+        js_free_shape_null(rt, shape);
+        list_del(el);
+        js_free_rt(rt, o);
+      }
     p = p->shape->proto;
   }
   return 0;

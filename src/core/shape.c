@@ -589,43 +589,35 @@ int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs)
 }
 
 int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *sh, void* target) {
-  ICWatchpoint *o, *watchpoint;
+  struct list_head *el, *el1;
   if (!sh || !sh->watchpoint)
     goto end;
-  watchpoint = sh->watchpoint;
-  while(watchpoint) {
-    o = watchpoint->next;
-    if (watchpoint->delete_callback) {
-      if (!watchpoint->delete_callback(rt, watchpoint->ref, watchpoint->atom, target)) {
-        if (o)
-          o->prev = watchpoint->prev;
-        if(watchpoint->prev)
-          watchpoint->prev->next = o;
-        else
-          sh->watchpoint = o;
-        js_free_rt(rt, watchpoint);
+  list_for_each_safe(el, el1, sh->watchpoint) {
+    ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
+    if (o->delete_callback)
+      if (!o->delete_callback(rt, o->ref, o->atom, target)) {
+        list_del(el);
+        js_free_rt(rt, o);
       }
-    }
-    watchpoint = o;
   }
 end:
   return 0;
 }
 
 int js_shape_free_watchpoints(JSRuntime* rt, JSShape *sh) {
-  ICWatchpoint *o, *watchpoint;
+  struct list_head *el, *el1;
   if (!sh || !sh->watchpoint)
     goto end;
-  watchpoint = sh->watchpoint;
-  sh->watchpoint = NULL;
-  while(watchpoint) {
-    o = watchpoint;
-    watchpoint = o->next;
+  list_for_each_safe(el, el1, sh->watchpoint) {
+    ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
     if (o->free_callback) {
       o->free_callback(rt, o->ref, o->atom);
-      js_free_rt(rt, o);
     }
+    list_del(el);
+    js_free_rt(rt, o);
   }
+  list_empty(sh->watchpoint);
+  js_free_rt(rt, sh->watchpoint);
 end:
   return 0;
 }
@@ -641,10 +633,11 @@ ICWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *sh, intptr_t pt
   o->atom = atom;
   o->delete_callback = remove_callback;
   o->free_callback = clear_callback;
-  if (sh->watchpoint)
-    sh->watchpoint->prev = o;
-  o->prev = NULL;
-  o->next = sh->watchpoint;
-  sh->watchpoint = o;
+  if (!sh->watchpoint) {
+    sh->watchpoint = (struct list_head *)js_malloc_rt(rt, sizeof(struct list_head));
+    init_list_head(sh->watchpoint);
+  }
+  init_list_head(&o->link);
+  list_add_tail(&o->link, sh->watchpoint);
   return o;
 }

@@ -1431,6 +1431,7 @@ void JS_SetPropertyFunctionList(JSContext* ctx, JSValueConst obj, const JSCFunct
     const JSCFunctionListEntry* e = &tab[i];
     JSAtom atom = find_atom(ctx, e->name);
     JS_InstantiateFunctionListItem(ctx, obj, atom, e);
+    JSObject *p = JS_VALUE_GET_OBJ(obj);
     JS_FreeAtom(ctx, atom);
   }
 }

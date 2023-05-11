@@ -89,9 +89,9 @@ JSValue JS_NewObjectFromShape(JSContext* ctx, JSShape* sh, JSClassID class_id);
 int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs);
 
 /* the watch point of shape for prototype inline cache or something else */
-int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *sh, void* target);
-int js_shape_free_watchpoints(JSRuntime *rt, JSShape *sh);
-ICWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *sh, intptr_t ptr, JSAtom atom,
+int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *shape, void* target);
+int js_shape_free_watchpoints(JSRuntime *rt, JSShape *shape);
+ICWatchpoint* js_shape_create_watchpoint(JSRuntime *rt, JSShape *shape, intptr_t ptr, JSAtom atom,
                              watchpoint_delete_callback *remove_callback,
                              watchpoint_free_callback *clear_callback);
 

@@ -163,8 +163,6 @@ JSValue JS_GetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* pro
 JSProperty* add_property(JSContext* ctx, JSObject* p, JSAtom prop, int prop_flags) {
   JSShape *sh, *new_sh;
   sh = p->shape;
-  if (ic_delete_shape_proto_watchpoints(ctx->rt, sh, prop))
-    return NULL;
   if (sh->is_hashed) {
     /* try to find an existing shape */
     new_sh = find_hashed_shape_prop(ctx->rt, sh, prop, prop_flags);
@@ -275,11 +273,11 @@ redo:
       pr->flags = 0;
       pr->atom = JS_ATOM_NULL;
       pr1->u.value = JS_UNDEFINED;
-
+      if (ic_delete_shape_proto_watchpoints(ctx->rt, sh, atom))
+        return -1;
       /* compact the properties if too many deleted properties */
-      if (sh->deleted_prop_count >= 8 && sh->deleted_prop_count >= ((unsigned)sh->prop_count / 2)) {
+      if (sh->deleted_prop_count >= 8 && sh->deleted_prop_count >= ((unsigned)sh->prop_count / 2))
         compact_properties(ctx, p);
-      }
       return TRUE;
     }
     lpr = pr;
@@ -1971,6 +1969,8 @@ retry:
     }
   }
 
+  if (ic_delete_shape_proto_watchpoints(ctx->rt, p->shape, prop))
+    return -1;
   pr = add_property(ctx, p, prop, JS_PROP_C_W_E);
   if (unlikely(!pr)) {
     JS_FreeValue(ctx, val);

@@ -590,7 +590,7 @@ int js_shape_prepare_update(JSContext* ctx, JSObject* p, JSShapeProperty** pprs)
 
 int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *shape, void* target) {
   struct list_head *el, *el1;
-  if (!shape || !shape->watchpoint)
+  if (unlikely(!shape || !shape->watchpoint))
     goto end;
   list_for_each_safe(el, el1, shape->watchpoint) {
     ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
@@ -598,6 +598,7 @@ int js_shape_delete_watchpoints(JSRuntime *rt, JSShape *shape, void* target) {
       if (!o->delete_callback(rt, o->ref, o->atom, target)) {
         list_del(el);
         js_free_rt(rt, o);
+        break;
       }
   }
 end:
@@ -606,7 +607,7 @@ end:
 
 int js_shape_free_watchpoints(JSRuntime* rt, JSShape *shape) {
   struct list_head *el, *el1;
-  if (!shape || !shape->watchpoint)
+  if (unlikely(!shape || !shape->watchpoint))
     goto end;
   list_for_each_safe(el, el1, shape->watchpoint) {
     ICWatchpoint *o = list_entry(el, ICWatchpoint, link);

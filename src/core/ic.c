@@ -136,7 +136,7 @@ int free_ic(InlineCache *ic) {
   return 0;
 }
 
-uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
+force_inline uint32_t add_ic_slot(InlineCache *ic, JSAtom atom, JSObject *object,
                      uint32_t prop_offset, JSObject* prototype) {
   int32_t i;
   uint32_t h;
@@ -253,7 +253,7 @@ int ic_delete_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape, JSAtom atom
   InlineCacheRingItem *ci;
   JSShape *sh;
   p = shape->proto;
-  while(p) {
+  while(likely(p)) {
     if (p->shape->watchpoint)
       list_for_each_safe(el, el1, p->shape->watchpoint) {
         ICWatchpoint *o = list_entry(el, ICWatchpoint, link);
@@ -280,7 +280,7 @@ int ic_free_shape_proto_watchpoints(JSRuntime *rt, JSShape *shape) {
   InlineCacheRingItem *ci;
   JSShape *sh;
   p = shape->proto;
-  while(p) {
+  while(likely(p)) {
     if (p->shape->watchpoint)
       list_for_each_safe(el, el1, p->shape->watchpoint) {
         ICWatchpoint *o = list_entry(el, ICWatchpoint, link);

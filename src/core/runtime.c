@@ -355,6 +355,8 @@ int JS_SetPrototypeInternal(JSContext* ctx, JSValueConst obj, JSValueConst proto
   if (js_shape_prepare_update(ctx, p, NULL))
     return -1;
   sh = p->shape;
+  if (ic_free_shape_proto_watchpoints(ctx->rt, p->shape))
+    return -1;
   if (sh->proto)
     JS_FreeValue(ctx, JS_MKPTR(JS_TAG_OBJECT, sh->proto));
   sh->proto = proto;
@@ -1429,6 +1431,7 @@ void JS_SetPropertyFunctionList(JSContext* ctx, JSValueConst obj, const JSCFunct
     const JSCFunctionListEntry* e = &tab[i];
     JSAtom atom = find_atom(ctx, e->name);
     JS_InstantiateFunctionListItem(ctx, obj, atom, e);
+    JSObject *p = JS_VALUE_GET_OBJ(obj);
     JS_FreeAtom(ctx, atom);
   }
 }

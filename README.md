@@ -13,7 +13,7 @@ In addition to the relevant features and optimizations in the [TODO](https://git
 - [ ] Basic Debugger API
 - [x] Poly IC
   - [x] Self Poly IC
-  - [ ] Prototype Poly IC 
+  - [x] Prototype Poly IC 
 - [x] Replace malloc To [mimalloc](https://github.com/microsoft/mimalloc)
 - [ ] Improve The Performance Of GC
 

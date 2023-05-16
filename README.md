@@ -49,10 +49,10 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 
 |               | bellard/quickjs (2788d71)    | openwebf/quickjs (latest)       |
 | ------------- | ---------- | ---------- |
-| Richards      | 1188        | 1320       |
-| Crypto        | 1443        | 1413       |
-| RayTrace      | 744        | 1990       |
-| NavierStokes  | 2775        | 2775       |
-| DeltaBlue     | 1100        | 1402       |
-| Total score   | 1312        | 1706 (+30.03%)      |
+| Richards      | 1188        | 1457       |
+| Crypto        | 1443        | 1527       |
+| RayTrace      | 744        | 1995       |
+| NavierStokes  | 2775        | 2979       |
+| DeltaBlue     | 1100        | 1595       |
+| Total score   | 1312        | 1840 (+40.2%)      |
 | File Size(KB) | 1.3M        | 1.4M        |

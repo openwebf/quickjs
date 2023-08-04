@@ -21,13 +21,13 @@ In our plan, we first complete the above optimizations and then gradually add th
 
 ### How To Build
 
-```shell
-> mkdir build
-> cd build
-> cmake .. && make -j4
-```
+1. Clone this repo and its submodules by doing `git clone --recursive <THIS_REPO_URL>`
+2. `mkdir build`
+3. `cd build`
+4. `cmake ..`
+5. `make -j4`
 
-you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in bin folder.
+you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in the `./bin` folder (from the repo root).
 
 
 ### How To Run Test262

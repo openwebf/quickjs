@@ -230,6 +230,16 @@ JSClassID JS_NewClassID(JSClassID* pclass_id) {
   return class_id;
 }
 
+JSClassID JS_GetClassID(JSValueConst v) {
+  JSObject *p;
+
+  if (JS_VALUE_GET_TAG(v) != JS_TAG_OBJECT)
+    return 0;
+  p = JS_VALUE_GET_OBJ(v);
+  assert(p != 0);
+  return p->class_id;
+}
+
 BOOL JS_IsRegisteredClass(JSRuntime* rt, JSClassID class_id) {
   return (class_id < rt->class_count && rt->class_array[class_id].class_id != 0);
 }

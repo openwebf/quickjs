@@ -209,6 +209,9 @@ struct JSRuntime {
     JSHostPromiseRejectionTracker *host_promise_rejection_tracker;
     void *host_promise_rejection_tracker_opaque;
 
+    JSHostPromiseRejectionTracker *host_unhandled_promise_rejection_tracker;
+    void *host_unhandled_promise_rejection_tracker_opaque;
+
     struct list_head job_list; /* list of JSJobEntry.link */
 
     JSModuleNormalizeFunc *module_normalize_func;

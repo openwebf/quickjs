@@ -47,12 +47,15 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 > - macOS Monterey 12.2.1
 > - Clang 13.0.0 arm64-apple-darwin21.3.0
 
-|               | bellard/quickjs (2788d71)    | openwebf/quickjs (latest)       |
-| ------------- | ---------- | ---------- |
-| Richards      | 1188        | 1457       |
-| Crypto        | 1443        | 1527       |
-| RayTrace      | 744        | 1995       |
-| NavierStokes  | 2775        | 2979       |
-| DeltaBlue     | 1100        | 1595       |
-| Total score   | 1312        | 1840 (+40.2%)      |
-| File Size(KB) | 1.3M        | 1.4M        |
+|               | openwebf/quickjs ([32acbde](https://github.com/openwebf/quickjs/tree/32acbdebc733c4ce7e2ad3d77b9d85318834896b))    | bellard/quickjs ([3ab1c2b](https://github.com/bellard/quickjs/tree/3ab1c2b3148d1c70181607002aac23ecdd2ad482))       | Improvement(%) |
+| ------------- | ---------- | ---------- |---------- |
+| DeltaBlue      | 1382        | 1021       | +35.35 |
+| RayTrace        | 1935        | 688       | +181.15 |
+| RegExp      | 353        | 255       | +38.43 |
+| NavierStokes  | 2756        | 2658       | +3.68  |
+| PdfJS     | 4934        | 3692       | +33.64 |
+| Gameboy   | 9948        | 9057| +9.83 |
+| Box2D   | 5264        | 4089| +28.77 |
+| Typescript  | 19108        | 13787| +38.59 |
+| Total Score | 3262        | 2339| +39.46 |
+| File Size(KB) | 1.5M        | 1.3M        | -15.38% |

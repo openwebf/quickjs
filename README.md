@@ -56,6 +56,6 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 | PdfJS     | 4934        | 3692       | +33.64 |
 | Gameboy   | 9948        | 9057| +9.83 |
 | Box2D   | 5264        | 4089| +28.77 |
-| Typescript  | 19108        | 13787|  | +38.59 |
-| Total Score | 3262        | 2339|  | +39.46 |
+| Typescript  | 19108        | 13787| +38.59 |
+| Total Score | 3262        | 2339| +39.46 |
 | File Size(KB) | 1.5M        | 1.3M        | -15.38% |

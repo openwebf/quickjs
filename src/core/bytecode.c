@@ -49,6 +49,8 @@ void free_function_bytecode(JSRuntime* rt, JSFunctionBytecode* b) {
     }
 #endif
   free_bytecode_atoms(rt, b->byte_code_buf, b->byte_code_len, TRUE);
+  if (b->ic != NULL)
+    free_ic(b->ic);
 
   if (b->vardefs) {
     for (i = 0; i < b->arg_count + b->var_count; i++) {
@@ -72,9 +74,6 @@ void free_function_bytecode(JSRuntime* rt, JSFunctionBytecode* b) {
     js_free_rt(rt, b->debug.pc2column_buf);
     js_free_rt(rt, b->debug.source);
   }
-
-  if (b->ic != NULL)
-    free_ic(b->ic);
 
   remove_gc_object(&b->header);
   if (rt->gc_phase == JS_GC_PHASE_REMOVE_CYCLES && b->header.ref_count != 0) {
@@ -603,7 +602,7 @@ static int JS_WriteFunctionTag(BCWriterState* s, JSValueConst obj) {
     dbuf_putc(&s->dbuf, 255);
     dbuf_putc(&s->dbuf, 73); // 'I'
     dbuf_putc(&s->dbuf, 67); // 'C'
-    if  (b->ic == NULL) {
+    if (b->ic == NULL) {
       bc_put_leb128(s, 0);
     } else {
       bc_put_leb128(s, b->ic->count);
@@ -1608,7 +1607,7 @@ static JSValue JS_ReadFunctionTag(BCReaderState* s) {
     }
 
     /** special column number check logic for V1(.kbc1 file) bytecode format. */
-    if (s->buf_end - s->ptr > 4  && s->ptr[0] == 255 && s->ptr[1] == 67 && s->ptr[2] == 79 && s->ptr[3] == 76) {
+    if (s->buf_end - s->ptr > 4 && s->ptr[0] == 255 && s->ptr[1] == 67 && s->ptr[2] == 79 && s->ptr[3] == 76) {
       s->ptr += 4;
       if (bc_get_leb128_int(s, &b->debug.column_num)) {
         goto fail;
@@ -1637,12 +1636,13 @@ static JSValue JS_ReadFunctionTag(BCReaderState* s) {
       if (ic_len == 0) {
         b->ic = NULL;
       } else {
-        b->ic = init_ic(ctx->rt);
+        b->ic = init_ic(ctx);
         if (b->ic == NULL)
           goto fail;
         for (i = 0; i < ic_len; i++) {
           bc_get_atom(s, &atom);
           add_ic_slot1(b->ic, atom);
+          JS_FreeAtom(ctx, atom);
         }
         rebuild_ic(b->ic);
       }

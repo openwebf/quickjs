@@ -2,6 +2,8 @@ name: linux-x64
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+
 jobs:
   test262:
     runs-on: ubuntu-latest

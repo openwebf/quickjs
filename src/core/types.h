@@ -158,6 +158,12 @@ typedef struct {
 } JSNumericOperations;
 #endif
 
+typedef enum {
+    JS_RUNTIME_STATE_INIT,
+    JS_RUNTIME_STATE_RUNNING,
+    JS_RUNTIME_STATE_SHUTDOWN,
+} JSRuntimeState;
+
 struct JSRuntime {
     JSMallocFunctions mf;
     JSMallocState malloc_state;
@@ -226,6 +232,7 @@ struct JSRuntime {
     uint32_t operator_count;
 #endif
     void *user_opaque;
+    JSRuntimeState state;
 };
 
 struct JSClass {
@@ -513,9 +520,22 @@ typedef enum JSFunctionKindEnum {
     JS_FUNC_ASYNC_GENERATOR = (JS_FUNC_GENERATOR | JS_FUNC_ASYNC),
 } JSFunctionKindEnum;
 
+typedef int watchpoint_delete_callback(JSRuntime* rt, intptr_t ref, JSAtom atom, void* target);
+typedef int watchpoint_free_callback(JSRuntime* rt, intptr_t ref, JSAtom atom);
+
+typedef struct ICWatchpoint {
+    intptr_t ref;
+    JSAtom atom;
+    watchpoint_delete_callback *delete_callback;
+    watchpoint_free_callback *free_callback;
+    struct list_head link;
+} ICWatchpoint;
+
 typedef struct InlineCacheRingItem {
-    JSShape* shape;
+    JSObject* proto;
+    JSShape *shape;
     uint32_t prop_offset;
+    ICWatchpoint *watchpoint_ref;
 } InlineCacheRingItem;
 
 typedef struct InlineCacheRingSlot {
@@ -534,7 +554,7 @@ typedef struct InlineCache {
     uint32_t count;
     uint32_t capacity;
     uint32_t hash_bits;
-    JSRuntime* rt;
+    JSContext *ctx;
     InlineCacheHashSlot **hash;
     InlineCacheRingSlot *cache;
     uint32_t updated_offset;
@@ -823,6 +843,7 @@ struct JSShape {
     int deleted_prop_count;
     JSShape *shape_hash_next; /* in JSRuntime.shape_hash[h] list */
     JSObject *proto;
+    struct list_head *watchpoint;
     JSShapeProperty prop[0]; /* prop_size elements */
 };
 

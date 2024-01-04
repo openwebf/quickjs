@@ -1489,6 +1489,8 @@ restart:
           ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field_ic);
           put_u32(pc - 4, ic->updated_offset);
+          // safe free call because ic struct will retain atom
+          JS_FreeAtom(ic->ctx, atom);
         }
         JS_FreeValue(ctx, sp[-1]);
         sp[-1] = val;
@@ -1518,13 +1520,15 @@ restart:
         atom = get_u32(pc);
         pc += 4;
 
-        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], NULL, FALSE);
+        val = JS_GetPropertyInternal(ctx, sp[-1], atom, sp[-1], ic, FALSE);
         if (unlikely(JS_IsException(val)))
           goto exception;
         if (ic != NULL && ic->updated == TRUE) {
           ic->updated = FALSE;
           put_u8(pc - 5, OP_get_field2_ic);
           put_u32(pc - 4, ic->updated_offset);
+          // safe free call because ic struct will retain atom
+          JS_FreeAtom(ic->ctx, atom);
         }
         *sp++ = val;
       }
@@ -1561,6 +1565,8 @@ restart:
           ic->updated = FALSE;
           put_u8(pc - 5, OP_put_field_ic);
           put_u32(pc - 4, ic->updated_offset);
+          // safe free call because ic struct will retain atom
+          JS_FreeAtom(ic->ctx, atom);
         }
       }
       BREAK;
@@ -1580,6 +1586,9 @@ restart:
         if (unlikely(ret < 0))
           goto exception;
       }
+      BREAK;
+
+      CASE(OP_debugger):
       BREAK;
 
       CASE(OP_private_symbol) : {

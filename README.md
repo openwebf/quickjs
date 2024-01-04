@@ -47,7 +47,7 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 > - macOS Monterey 12.2.1
 > - Clang 13.0.0 arm64-apple-darwin21.3.0
 
-|               | openwebf/quickjs (latest)    | bellard/quickjs (2788d71)       | Improvement(%) |
+|               | openwebf/quickjs ([32acbde](https://github.com/openwebf/quickjs/tree/32acbdebc733c4ce7e2ad3d77b9d85318834896b))    | bellard/quickjs ([3ab1c2b](https://github.com/bellard/quickjs/tree/3ab1c2b3148d1c70181607002aac23ecdd2ad482))       | Improvement(%) |
 | ------------- | ---------- | ---------- |---------- |
 | DeltaBlue      | 1382        | 1021       | +35.35 |
 | RayTrace        | 1935        | 688       | +181.15 |

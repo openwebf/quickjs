@@ -48,7 +48,7 @@ Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
 > - Clang 13.0.0 arm64-apple-darwin21.3.0
 
 |               | openwebf/quickjs (latest)    | bellard/quickjs (2788d71)       | Improvement(%) |
-| ------------- | ---------- | ---------- |
+| ------------- | ---------- | ---------- |---------- |
 | DeltaBlue      | 1382        | 1021       | +35.35 |
 | RayTrace        | 1935        | 688       | +181.15 |
 | RegExp      | 353        | 255       | +38.43 |

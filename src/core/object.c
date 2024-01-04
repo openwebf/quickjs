@@ -461,7 +461,7 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
         }
       } else {
         // basic poly ic is only used for fast path
-        if (ic && p->shape->is_hashed) {
+        if (ic && p1->shape->is_hashed && p->shape->is_hashed) {
           ic->updated = TRUE;
           ic->updated_offset = add_ic_slot(ic, prop, p1, offset, proto_depth > 0 ? p : NULL);
         }

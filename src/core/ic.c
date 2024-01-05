@@ -79,10 +79,9 @@ int resize_ic_hash(InlineCache *ic) {
   InlineCacheHashSlot **new_hash;
   ic->hash_bits += 1;
   new_capacity = 1 << ic->hash_bits;
-  new_hash = js_malloc(ic->ctx, sizeof(ic->hash[0]) * new_capacity);
+  new_hash = js_mallocz(ic->ctx, sizeof(ic->hash[0]) * new_capacity);
   if (unlikely(!new_hash))
-    goto fail;
-  memset(new_hash, 0, sizeof(ic->hash[0]) * new_capacity);
+      goto fail;
   for (i = 0; i < ic->capacity; i++) {
     for (ch = ic->hash[i]; ch != NULL; ch = ch_next) {
       h = get_index_hash(ch->atom, ic->hash_bits);

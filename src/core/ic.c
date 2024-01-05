@@ -38,10 +38,9 @@ InlineCache *init_ic(JSContext *ctx) {
   ic->hash_bits = 2;
   ic->capacity = 1 << ic->hash_bits;
   ic->ctx = ctx;
-  ic->hash = js_malloc(ctx, sizeof(ic->hash[0]) * ic->capacity);
+  ic->hash = js_mallocz(ctx, sizeof(ic->hash[0]) * ic->capacity);
   if (unlikely(!ic->hash))
     goto fail;
-  memset(ic->hash, 0, sizeof(ic->hash[0]) * ic->capacity);
   ic->cache = NULL;
   ic->updated = FALSE;
   ic->updated_offset = 0;
@@ -56,10 +55,9 @@ int rebuild_ic(InlineCache *ic) {
   if (ic->count == 0)
     goto end;
   count = 0;
-  ic->cache = js_malloc(ic->ctx, sizeof(InlineCacheRingSlot) * ic->count);
+  ic->cache = js_mallocz(ic->ctx, sizeof(InlineCacheRingSlot) * ic->count);
   if (unlikely(!ic->cache))
     goto fail;
-  memset(ic->cache, 0, sizeof(InlineCacheRingSlot) * ic->count);
   for (i = 0; i < ic->capacity; i++) {
     for (ch = ic->hash[i]; ch != NULL; ch = ch->next) {
       ch->index = count++;

@@ -1,6 +1,6 @@
 /*
  * C utilities
- * 
+ *
  * Copyright (c) 2017 Fabrice Bellard
  * Copyright (c) 2018 Charlie Gordon
  *
@@ -27,7 +27,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "mimalloc.h"
 #include "quickjs/cutils.h"
 
 void pstrcpy(char *buf, int buf_size, const char *str)
@@ -84,7 +83,11 @@ int has_suffix(const char *str, const char *suffix)
 
 static void *dbuf_default_realloc(void *opaque, void *ptr, size_t size)
 {
+#if ENABLE_MI_MALLOC
     return mi_realloc(ptr, size);
+#else
+    return realloc(ptr, size);
+#endif
 }
 
 void dbuf_init2(DynBuf *s, void *opaque, DynBufReallocFunc *realloc_func)
@@ -173,7 +176,7 @@ int __attribute__((format(printf, 2, 3))) dbuf_printf(DynBuf *s,
     va_list ap;
     char buf[128];
     int len;
-    
+
     va_start(ap, fmt);
     len = vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
@@ -312,7 +315,7 @@ int utf8_str_len(const uint8_t *p_start, const uint8_t *p_end) {
         }
         count += 1;
     }
-    
+
     return count;
 }
 

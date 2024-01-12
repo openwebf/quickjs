@@ -3,6 +3,7 @@ project(QUICKJS)
 set(C_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(MI_OVERRIDE OFF)
+set(ENABLE_MI_MALLOC OFF)
 
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)
@@ -64,6 +65,9 @@ add_custom_command(
 
 add_executable(qjs qjs.c quickjs-libc.c repl.c qjscalc.c)
 target_link_libraries(qjs quickjs ${LINK_LIBRARIES} mimalloc-static)
+
+add_executable(run_octane run_octane.c quickjs-libc.c)
+target_link_libraries(run_octane quickjs ${LINK_LIBRARIES} mimalloc-static)
 
 add_executable(run-test262 run-test262.c quickjs-libc.c)
 target_link_libraries(run-test262 quickjs ${LINK_LIBRARIES} mimalloc-static)

@@ -32,7 +32,6 @@
 #include <immintrin.h>
 #endif
 
-#include "mimalloc.h"
 #include "core/convertion.h"
 #include "quickjs/cutils.h"
 #include "quickjs/libbf.h"

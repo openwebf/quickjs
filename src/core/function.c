@@ -79,7 +79,7 @@ JSValue js_call_c_function(JSContext* ctx,
 #else
   sf->js_mode = 0;
 #endif
-  sf->cur_func = (JSValue)func_obj;
+  sf->cur_func = func_obj;
   sf->arg_count = argc;
   arg_buf = argv;
 
@@ -303,7 +303,7 @@ JSValue JS_CallInternal(JSContext* caller_ctx,
   sf->js_mode = b->js_mode;
   arg_buf = argv;
   sf->arg_count = argc;
-  sf->cur_func = (JSValue)func_obj;
+  sf->cur_func = func_obj;
   init_list_head(&sf->var_ref_list);
   var_refs = p->u.func.var_refs;
 
@@ -1490,7 +1490,7 @@ restart:
           put_u8(pc - 5, OP_get_field_ic);
           put_u32(pc - 4, ic->updated_offset);
           // safe free call because ic struct will retain atom
-          JS_FreeAtom(ic->ctx, atom);
+          JS_FreeAtom(ctx, atom);
         }
         JS_FreeValue(ctx, sp[-1]);
         sp[-1] = val;
@@ -1528,7 +1528,7 @@ restart:
           put_u8(pc - 5, OP_get_field2_ic);
           put_u32(pc - 4, ic->updated_offset);
           // safe free call because ic struct will retain atom
-          JS_FreeAtom(ic->ctx, atom);
+          JS_FreeAtom(ctx, atom);
         }
         *sp++ = val;
       }
@@ -1566,7 +1566,7 @@ restart:
           put_u8(pc - 5, OP_put_field_ic);
           put_u32(pc - 4, ic->updated_offset);
           // safe free call because ic struct will retain atom
-          JS_FreeAtom(ic->ctx, atom);
+          JS_FreeAtom(ctx, atom);
         }
       }
       BREAK;

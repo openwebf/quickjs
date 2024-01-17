@@ -4447,3 +4447,4 @@ static const uint16_t unicode_prop_len_table[] = {
 };
 
 #endif /* CONFIG_ALL_UNICODE */
+

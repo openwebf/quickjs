@@ -32,10 +32,6 @@
 
 #define ATOM_GET_STR_BUF_SIZE 64
 
-#define JS_ATOM_TAG_INT (1U << 31)
-#define JS_ATOM_MAX_INT (JS_ATOM_TAG_INT - 1)
-#define JS_ATOM_MAX ((1U << 30) - 1)
-
 /* return the max count from the hash size */
 #define JS_ATOM_COUNT_RESIZE(n) ((n)*2)
 
@@ -93,7 +89,6 @@ int JS_AtomIsNumericIndex(JSContext* ctx, JSAtom atom);
 /* Warning: 'p' is freed */
 JSAtom JS_NewAtomStr(JSContext* ctx, JSString* p);
 __maybe_unused void JS_DumpAtoms(JSRuntime* rt);
-JSAtom JS_DupAtomRT(JSRuntime* rt, JSAtom v);
 JSAtomKindEnum JS_AtomGetKind(JSContext* ctx, JSAtom v);
 BOOL JS_AtomIsString(JSContext* ctx, JSAtom v);
 JSAtom js_get_atom_index(JSRuntime* rt, JSAtomStruct* p);

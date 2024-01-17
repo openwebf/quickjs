@@ -60,12 +60,10 @@ static void compute_bytecode_size(JSFunctionBytecode *b, JSMemoryUsage_helper *h
 {
   int memory_used_count, js_func_size, i;
   memory_used_count = 0;
-
   js_func_size = offsetof(JSFunctionBytecode, debug);
   if (b->vardefs) {
     js_func_size += (b->arg_count + b->var_count) * sizeof(*b->vardefs);
   }
-
   if (b->cpool) {
     js_func_size += b->cpool_count * sizeof(*b->cpool);
     for (i = 0; i < b->cpool_count; i++) {
@@ -73,28 +71,23 @@ static void compute_bytecode_size(JSFunctionBytecode *b, JSMemoryUsage_helper *h
       compute_value_size(val, hp);
     }
   }
-  
   if (b->closure_var) {
     js_func_size += b->closure_var_count * sizeof(*b->closure_var);
   }
-
   if (!b->read_only_bytecode && b->byte_code_buf) {
     hp->js_func_code_size += b->byte_code_len;
   }
-  
   if (b->has_debug) {
     js_func_size += sizeof(*b) - offsetof(JSFunctionBytecode, debug);
     if (b->debug.source) {
       memory_used_count++;
       js_func_size += b->debug.source_len + 1;
     }
-
     if (b->debug.pc2line_len) {
       memory_used_count++;
       hp->js_func_pc2line_count += 1;
       hp->js_func_pc2line_size += b->debug.pc2line_len;
     }
-
     if (b->debug.pc2column_len) {
       memory_used_count++;
       hp->js_func_pc2column_count += 1;
@@ -419,6 +412,12 @@ void JS_ComputeMemoryUsage(JSRuntime *rt, JSMemoryUsage *s)
 
 void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
 {
+  fprintf(fp, "QuickJS memory usage -- "
+#ifdef CONFIG_BIGNUM
+          "BigNum "
+#endif
+          CONFIG_VERSION " version, %d-bit, malloc limit: %"PRId64"\n\n",
+          (int)sizeof(void *) * 8, (int64_t)(ssize_t)s->malloc_limit);
 #if 1
   if (rt) {
     static const struct {
@@ -487,19 +486,16 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
             MALLOC_OVERHEAD, ((double)(s->malloc_size - s->memory_used_size) /
                               s->memory_used_count));
   }
-
   if (s->atom_count) {
     fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per atom)\n",
             "atoms", s->atom_count, s->atom_size,
             (double)s->atom_size / s->atom_count);
   }
-  
   if (s->str_count) {
     fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per string)\n",
             "strings", s->str_count, s->str_size,
             (double)s->str_size / s->str_count);
   }
-  
   if (s->obj_count) {
     fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per object)\n",
             "objects", s->obj_count, s->obj_size,
@@ -511,7 +507,6 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
             "  shapes", s->shape_count, s->shape_size,
             (double)s->shape_size / s->shape_count);
   }
-  
   if (s->js_func_count) {
     fprintf(fp, "%-20s %8"PRId64" %8"PRId64"\n",
             "bytecode functions", s->js_func_count, s->js_func_size);
@@ -524,7 +519,6 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
               s->js_func_pc2line_size,
               (double)s->js_func_pc2line_size / s->js_func_pc2line_count);
     }
-
     if(s->js_func_pc2column_count) {
       fprintf(fp, "%-20s %8"PRId64" %8"PRId64"  (%0.1f per function)\n",
               "  pc2column", s->js_func_pc2column_count,
@@ -532,11 +526,9 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
               (double)s->js_func_pc2column_size / s->js_func_pc2column_count);
     }
   }
-  
   if (s->c_func_count) {
     fprintf(fp, "%-20s %8"PRId64"\n", "C functions", s->c_func_count);
   }
-  
   if (s->array_count) {
     fprintf(fp, "%-20s %8"PRId64"\n", "arrays", s->array_count);
     if (s->fast_array_count) {
@@ -547,7 +539,6 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt)
               (double)s->fast_array_elements / s->fast_array_count);
     }
   }
-  
   if (s->binary_object_count) {
     fprintf(fp, "%-20s %8"PRId64" %8"PRId64"\n",
             "binary objects", s->binary_object_count, s->binary_object_size);

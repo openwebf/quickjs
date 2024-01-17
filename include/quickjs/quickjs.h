@@ -46,7 +46,11 @@ extern "C" {
 #else
 #define js_likely(x)     (x)
 #define js_unlikely(x)   (x)
+#ifdef _MSC_VER
+#define js_force_inline  __forceinline
+#else
 #define js_force_inline  inline
+#endif
 #define __js_printf_like(a, b)
 #endif
 
@@ -68,6 +72,10 @@ typedef uint32_t JSAtom;
 
 #ifndef JS_PTR64
 #define JS_NAN_BOXING
+#endif
+
+#ifdef _MSC_VER
+typedef size_t ssize_t;
 #endif
 
 enum {
@@ -215,8 +223,23 @@ typedef struct JSValue {
 #define JS_VALUE_GET_FLOAT64(v) ((v).u.float64)
 #define JS_VALUE_GET_PTR(v) ((v).u.ptr)
 
+#ifdef _MSC_VER
+static inline JSValue JS_MKVAL(int tag, int32_t val) {
+    JSValue v;
+    v.u.int32 = val;
+    v.tag = tag;
+    return v;
+}
+static inline JSValue JS_MKPTR(int tag, void *val) {
+    JSValue v;
+    v.u.ptr = val;
+    v.tag = tag;
+    return v;
+}
+#else
 #define JS_MKVAL(tag, val) (JSValue){ (JSValueUnion){ .int32 = val }, tag }
 #define JS_MKPTR(tag, p) (JSValue){ (JSValueUnion){ .ptr = p }, tag }
+#endif
 
 #define JS_TAG_IS_FLOAT64(tag) ((unsigned)(tag) == JS_TAG_FLOAT64)
 
@@ -331,6 +354,8 @@ JSRuntime *JS_NewRuntime(void);
 void JS_SetRuntimeInfo(JSRuntime *rt, const char *info);
 void JS_SetMemoryLimit(JSRuntime *rt, size_t limit);
 void JS_SetGCThreshold(JSRuntime *rt, size_t gc_threshold);
+void JS_TurnOffGC(JSRuntime *rt);
+void JS_TurnOnGC(JSRuntime *rt);
 /* use 0 to disable maximum stack size check */
 void JS_SetMaxStackSize(JSRuntime *rt, size_t stack_size);
 /* should be called when changing thread to update the stack top value
@@ -433,12 +458,13 @@ static const char js_atom_init[] =
 #define DEF(name, str) str "\0"
 #include "quickjs/quickjs-atom.h"
 #undef DEF
-    ;
+   ;
 
 JSAtom JS_NewAtomLen(JSContext *ctx, const char *str, size_t len);
 JSAtom JS_NewAtom(JSContext *ctx, const char *str);
 JSAtom JS_NewAtomUInt32(JSContext *ctx, uint32_t n);
 JSAtom JS_DupAtom(JSContext *ctx, JSAtom v);
+JSAtom JS_DupAtomRT(JSRuntime *runtime, JSAtom v);
 void JS_FreeAtom(JSContext *ctx, JSAtom v);
 void JS_FreeAtomRT(JSRuntime *rt, JSAtom v);
 JSValue JS_AtomToValue(JSContext *ctx, JSAtom atom);
@@ -526,7 +552,7 @@ static js_force_inline JSValue JS_NewCatchOffset(JSContext *ctx, int32_t val)
 static js_force_inline JSValue JS_NewInt64(JSContext *ctx, int64_t val) {
   JSValue v;
   if (val == (int32_t)val) {
-    v = JS_NewInt32(ctx, val);
+    v = JS_NewInt32(ctx, (int32_t) val);
   } else {
     v = __JS_NewFloat64(ctx, val);
   }
@@ -662,7 +688,7 @@ static inline JSValue JS_DupValue(JSContext *ctx, JSValueConst v) {
     JSRefCountHeader* p = (JSRefCountHeader*)JS_VALUE_GET_PTR(v);
     p->ref_count++;
   }
-  return (JSValue)v;
+  return v;
 }
 
 static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v) {
@@ -670,7 +696,7 @@ static inline JSValue JS_DupValueRT(JSRuntime *rt, JSValueConst v) {
     JSRefCountHeader* p = (JSRefCountHeader*)JS_VALUE_GET_PTR(v);
     p->ref_count++;
   }
-  return (JSValue)v;
+  return v;
 }
 
 int JS_ToBool(JSContext *ctx, JSValueConst val); /* return -1 for JS_EXCEPTION */
@@ -729,6 +755,7 @@ int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom p
 static inline int JS_SetProperty(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val) {
   return JS_SetPropertyInternal(ctx, this_obj, prop, val, JS_PROP_THROW, NULL);
 }
+
 int JS_SetPropertyUint32(JSContext* ctx, JSValueConst this_obj, uint32_t idx, JSValue val);
 int JS_SetPropertyInt64(JSContext* ctx, JSValueConst this_obj, int64_t idx, JSValue val);
 int JS_SetPropertyStr(JSContext* ctx, JSValueConst this_obj, const char* prop, JSValue val);

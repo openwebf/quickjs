@@ -538,10 +538,17 @@ JSValue JS_GetPropertyInternal(JSContext *ctx, JSValueConst obj,
   }
 }
 
+#if _MSC_VER
+JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst obj,
+                                                  JSAtom prop, JSValueConst this_obj,
+                                                  InlineCache *ic, int32_t offset,
+                                                  BOOL throw_ref_error)
+#else
 force_inline JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst obj,
-                               JSAtom prop, JSValueConst this_obj,
-                               InlineCache *ic, int32_t offset, 
-                               BOOL throw_ref_error) 
+                                                  JSAtom prop, JSValueConst this_obj,
+                                                  InlineCache *ic, int32_t offset,
+                                                  BOOL throw_ref_error)
+#endif
 {
   uint32_t tag;
   JSObject *p, *proto;
@@ -556,7 +563,7 @@ force_inline JSValue JS_GetPropertyInternalWithIC(JSContext *ctx, JSValueConst o
     return JS_DupValue(ctx, p->prop[offset].u.value);
   }
 slow_path:
-  return JS_GetPropertyInternal(ctx, obj, prop, this_obj, ic, throw_ref_error);      
+  return JS_GetPropertyInternal(ctx, obj, prop, this_obj, ic, throw_ref_error);
 }
 
 JSValue JS_GetOwnPropertyNames2(JSContext* ctx, JSValueConst obj1, int flags, int kind) {
@@ -877,7 +884,7 @@ int JS_DefinePrivateField(JSContext* ctx, JSValueConst obj, JSValueConst name, J
     JS_ThrowTypeErrorNotASymbol(ctx);
     goto fail;
   }
-  prop = js_symbol_to_atom(ctx, (JSValue)name);
+  prop = js_symbol_to_atom(ctx, name);
   p = JS_VALUE_GET_OBJ(obj);
   prs = find_own_property(&pr, p, prop);
   if (prs) {
@@ -905,7 +912,7 @@ JSValue JS_GetPrivateField(JSContext* ctx, JSValueConst obj, JSValueConst name) 
   /* safety check */
   if (unlikely(JS_VALUE_GET_TAG(name) != JS_TAG_SYMBOL))
     return JS_ThrowTypeErrorNotASymbol(ctx);
-  prop = js_symbol_to_atom(ctx, (JSValue)name);
+  prop = js_symbol_to_atom(ctx, name);
   p = JS_VALUE_GET_OBJ(obj);
   prs = find_own_property(&pr, p, prop);
   if (!prs) {
@@ -930,7 +937,7 @@ int JS_SetPrivateField(JSContext* ctx, JSValueConst obj, JSValueConst name, JSVa
     JS_ThrowTypeErrorNotASymbol(ctx);
     goto fail;
   }
-  prop = js_symbol_to_atom(ctx, (JSValue)name);
+  prop = js_symbol_to_atom(ctx, name);
   p = JS_VALUE_GET_OBJ(obj);
   prs = find_own_property(&pr, p, prop);
   if (!prs) {
@@ -1018,7 +1025,7 @@ int JS_CheckBrand(JSContext* ctx, JSValueConst obj, JSValueConst func) {
   if (unlikely(JS_VALUE_GET_TAG(obj) != JS_TAG_OBJECT))
     goto not_obj;
   p = JS_VALUE_GET_OBJ(obj);
-  prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, (JSValue)brand));
+  prs = find_own_property(&pr, p, js_symbol_to_atom(ctx, brand));
   if (!prs) {
     JS_ThrowTypeError(ctx, "invalid brand on object");
     return -1;
@@ -1368,7 +1375,7 @@ redo_prop_update:
         return -1;
       }
       /* this code relies on the fact that Uint32 are never allocated */
-      val = (JSValueConst)JS_NewUint32(ctx, array_length);
+      val = JS_NewUint32(ctx, array_length);
       /* prs may have been modified */
       prs = find_own_property(&pr, p, prop);
       assert(prs != NULL);
@@ -1976,6 +1983,7 @@ retry:
     return -1;
   }
   pr->u.value = val;
+  /* fast case */
   if (ic && p->shape->is_hashed) {
     ic->updated = TRUE;
     ic->updated_offset = add_ic_slot(ic, prop, p, p->shape->prop_count - 1, NULL);
@@ -1983,7 +1991,11 @@ retry:
   return TRUE;
 }
 
+#if _MSC_VER
+int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
+#else
 force_inline int JS_SetPropertyInternalWithIC(JSContext* ctx, JSValueConst this_obj, JSAtom prop, JSValue val, int flags, InlineCache *ic, int32_t offset) {
+#endif
   uint32_t tag;
   JSObject *p, *proto;
   tag = JS_VALUE_GET_TAG(this_obj);

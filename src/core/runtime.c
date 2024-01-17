@@ -23,6 +23,7 @@
  * THE SOFTWARE.
  */
 
+#include <math.h>
 #include "runtime.h"
 #include "builtins/js-array.h"
 #include "builtins/js-function.h"
@@ -148,10 +149,8 @@ int find_line_num(JSContext* ctx, JSFunctionBytecode* b, uint32_t pc_value) {
     if (pc_value < pc) {
       return line_num;
     }
-
     line_num = new_line_num;
   }
-
   return line_num;
 }
 
@@ -195,10 +194,8 @@ int find_column_num(JSContext* ctx, JSFunctionBytecode* b, uint32_t pc_value) {
     if (pc_value < pc) {
       return column_num;
     }
-
     column_num = new_column_num;
   }
-
   return column_num;
 }
 
@@ -1148,19 +1145,16 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
       latest_line_num = line_num;
       dbuf_printf(&dbuf, ":%d", line_num);
     }
-
     if (column_num != -1) {
       latest_column_num = column_num;
       dbuf_printf(&dbuf, ":%d", column_num);
     }
-
     dbuf_putc(&dbuf, '\n');
     str = JS_NewString(ctx, filename);
     JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_fileName, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     if (backtrace_flags & JS_BACKTRACE_FLAG_SINGLE_LEVEL)
       goto done;
   }
-
   for (sf = ctx->rt->current_stack_frame; sf != NULL; sf = sf->prev_frame) {
     if (backtrace_flags & JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL) {
       backtrace_flags &= ~JS_BACKTRACE_FLAG_SKIP_FIRST_LEVEL;
@@ -1190,15 +1184,12 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
         if (column_num != -1) {
           column_num += 1;
         }
-        
         if (latest_line_num == -1) {
           latest_line_num = line_num;
         }
-
         if (latest_column_num == -1) {
           latest_column_num = column_num;
         }
-
         atom_str = JS_AtomToCString(ctx, b->debug.filename);
         dbuf_printf(&dbuf, " (%s", atom_str ? atom_str : "<null>");
         JS_FreeCString(ctx, atom_str);
@@ -1214,13 +1205,11 @@ void build_backtrace(JSContext* ctx, JSValueConst error_obj, const char* filenam
     } else {
       dbuf_printf(&dbuf, " (native)");
     }
-
     dbuf_putc(&dbuf, '\n');
     /* stop backtrace if JS_EVAL_FLAG_BACKTRACE_BARRIER was used */
     if (backtrace_barrier)
       break;
   }
-
 done:
   dbuf_putc(&dbuf, '\0');
   if (dbuf_error(&dbuf)) {
@@ -1228,33 +1217,20 @@ done:
   } else {
     str = JS_NewString(ctx, (char*)dbuf.buf);
   }
-
   dbuf_free(&dbuf);
   JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_stack, str, JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
-
   if (line_num != -1) {
-    JS_DefinePropertyValue(
-      ctx, 
-      error_obj, 
-      JS_ATOM_lineNumber, 
-      JS_NewInt32(ctx, latest_line_num), 
-      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE
-    );
-
+    JS_DefinePropertyValue(ctx, error_obj, JS_ATOM_lineNumber, JS_NewInt32(ctx, latest_line_num),
+      JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
     if (column_num != -1) {
-      /** 
-       * do not add the corresponding definition 
-       * in the 'quickjs-atom.h' file, it will lead to 
+      /**
+       * do not add the corresponding definition
+       * in the 'quickjs-atom.h' file, it will lead to
        * inaccurate diff positions of the atom table
        */
       int atom = JS_NewAtom(ctx, "columnNumber");
-      JS_DefinePropertyValue(
-        ctx, 
-        error_obj, 
-        atom, 
-        JS_NewInt32(ctx, latest_column_num), 
-        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE
-      );
+      JS_DefinePropertyValue(ctx, error_obj, atom, JS_NewInt32(ctx, latest_column_num),
+        JS_PROP_WRITABLE | JS_PROP_CONFIGURABLE);
       JS_FreeAtom(ctx, atom);
     }
   }
@@ -1430,7 +1406,6 @@ void JS_SetPropertyFunctionList(JSContext* ctx, JSValueConst obj, const JSCFunct
     const JSCFunctionListEntry* e = &tab[i];
     JSAtom atom = find_atom(ctx, e->name);
     JS_InstantiateFunctionListItem(ctx, obj, atom, e);
-    JSObject *p = JS_VALUE_GET_OBJ(obj);
     JS_FreeAtom(ctx, atom);
   }
 }
@@ -2127,6 +2102,7 @@ static const JSCFunctionListEntry js_object_funcs[] = {
     // JS_CFUNC_DEF("__getObjectData", 1, js_object___getObjectData ),
     // JS_CFUNC_DEF("__setObjectData", 2, js_object___setObjectData ),
     JS_CFUNC_DEF("fromEntries", 1, js_object_fromEntries),
+    JS_CFUNC_DEF("hasOwn", 2, js_object_hasOwn),
 };
 
 static const JSCFunctionListEntry js_object_proto_funcs[] = {
@@ -2239,7 +2215,7 @@ static const JSCFunctionListEntry js_global_funcs[] = {
     JS_CFUNC_DEF("parseInt", 2, js_parseInt), JS_CFUNC_DEF("parseFloat", 1, js_parseFloat), JS_CFUNC_DEF("isNaN", 1, js_global_isNaN), JS_CFUNC_DEF("isFinite", 1, js_global_isFinite),
     JS_CFUNC_MAGIC_DEF("decodeURI", 1, js_global_decodeURI, 0), JS_CFUNC_MAGIC_DEF("decodeURIComponent", 1, js_global_decodeURI, 1), JS_CFUNC_MAGIC_DEF("encodeURI", 1, js_global_encodeURI, 0),
     JS_CFUNC_MAGIC_DEF("encodeURIComponent", 1, js_global_encodeURI, 1), JS_CFUNC_DEF("escape", 1, js_global_escape), JS_CFUNC_DEF("unescape", 1, js_global_unescape),
-    JS_PROP_DOUBLE_DEF("Infinity", 1.0 / 0.0, 0), JS_PROP_DOUBLE_DEF("NaN", NAN, 0), JS_PROP_UNDEFINED_DEF("undefined", 0),
+    JS_PROP_DOUBLE_DEF("Infinity", INFINITY, 0), JS_PROP_DOUBLE_DEF("NaN", NAN, 0), JS_PROP_UNDEFINED_DEF("undefined", 0),
 
     /* for the 'Date' implementation */
     JS_CFUNC_DEF("__date_clock", 0, js___date_clock),
@@ -2327,6 +2303,8 @@ static const JSCFunctionListEntry js_string_proto_normalize[] = {
     JS_CFUNC_DEF("normalize", 0, js_string_normalize),
 };
 #endif
+
+#pragma function (log2)
 
 /* Math */
 static const JSCFunctionListEntry js_math_funcs[] = {
@@ -3028,7 +3006,8 @@ JSRuntime* JS_NewRuntime2(const JSMallocFunctions* mf, void* opaque) {
     rt->mf.js_malloc_usable_size = js_malloc_usable_size_unknown;
   }
   rt->malloc_state = ms;
-  rt->malloc_gc_threshold = 256 * 1024;
+  rt->malloc_gc_threshold = 64 * 1024 * 1024; // 64 MB as a start
+  rt->gc_off = FALSE;
 
 #ifdef CONFIG_BIGNUM
   bf_context_init(&rt->bf_ctx, js_bf_realloc, rt);
@@ -3086,7 +3065,22 @@ static const JSMallocFunctions def_malloc_funcs = {
     js_def_malloc,
     js_def_free,
     js_def_realloc,
+#if ENABLE_MI_MALLOC
     mi_usable_size,
+#else
+#if defined(__APPLE__)
+    malloc_size,
+#elif defined(_WIN32)
+    (size_t(*)(const void*))_msize,
+#elif defined(EMSCRIPTEN)
+    NULL,
+#elif defined(__linux__)
+    (size_t(*)(const void*))malloc_usable_size,
+#else
+    /* change this to `NULL,` if compilation fails */
+    malloc_usable_size,
+#endif
+#endif
 };
 
 JSRuntime* JS_NewRuntime(void) {

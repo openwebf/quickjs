@@ -4,6 +4,8 @@ set(C_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(MI_OVERRIDE OFF)
 
+add_definitions(-DENABLE_MI_MALLOC)
+
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)
 if( supported )

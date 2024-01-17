@@ -28,7 +28,6 @@
 #include <string.h>
 #include <assert.h>
 
-#include "mimalloc.h"
 #include "quickjs/cutils.h"
 #include "quickjs/libregexp.h"
 
@@ -2061,7 +2060,7 @@ static int push_state(REExecContext *s,
 
     if (unlikely((s->state_stack_len + 1) > s->state_stack_size)) {
         /* reallocate the stack */
-        new_size = s->state_stack_size * 3 / 2;
+        new_size = s->state_stack_size * 9 / 2;
         if (new_size < 8)
             new_size = 8;
         new_stack = lre_realloc(s->opaque, s->state_stack, new_size * s->state_size);

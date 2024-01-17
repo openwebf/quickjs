@@ -35,6 +35,10 @@
 #include "quickjs/libbf.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
     /* classid tag        */    /* union usage   | properties */
     JS_CLASS_OBJECT = 1,        /* must be first */
@@ -188,6 +192,7 @@ struct JSRuntime {
     struct list_head gc_zero_ref_count_list;
     struct list_head tmp_obj_list; /* used during GC */
     JSGCPhaseEnum gc_phase : 8;
+    BOOL gc_off: 8;
     size_t malloc_gc_threshold;
 #ifdef DUMP_LEAKS
     struct list_head string_list; /* list of JSString.link */
@@ -554,7 +559,7 @@ typedef struct InlineCache {
     uint32_t count;
     uint32_t capacity;
     uint32_t hash_bits;
-    JSContext *ctx;
+    JSContext* ctx;
     InlineCacheHashSlot **hash;
     InlineCacheRingSlot *cache;
     uint32_t updated_offset;
@@ -815,8 +820,8 @@ typedef struct JSProperty {
     } u;
 } JSProperty;
 
-#define JS_PROP_INITIAL_SIZE 2
-#define JS_PROP_INITIAL_HASH_SIZE 4 /* must be a power of two */
+#define JS_PROP_INITIAL_SIZE 6
+#define JS_PROP_INITIAL_HASH_SIZE 24 /* must be a power of two */
 #define JS_ARRAY_INITIAL_SIZE 2
 
 typedef struct JSShapeProperty {
@@ -984,5 +989,9 @@ enum OPCodeEnum {
 #define ATOD_MODE_BIGINT      (1 << 9)
 /* accept -0x1 */
 #define ATOD_ACCEPT_PREFIX_AFTER_SIGN (1 << 10)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

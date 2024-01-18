@@ -15,7 +15,8 @@ In addition to the relevant features and optimizations in the [TODO](https://git
   - [x] Self Poly IC
   - [x] Prototype Poly IC 
 - [x] Replace malloc To [mimalloc](https://github.com/microsoft/mimalloc)
-- [ ] Improve The Performance Of GC
+- [ ] Improving The Performance Of GC
+- [ ] Optimizing Opcode Bytecode
 
 In our plan, we first complete the above optimizations and then gradually add the remaining parts.
 
@@ -38,24 +39,31 @@ you can find `libquickjs.a` in lib folder and `qjs` / `qjsc` / `run-test262` in 
 
 It will output result like:
 ```
-Result: 573/75124 errors, 1388 excluded, 7844 skipped, 573 new
+Result: 443/75250 errors, 1392 excluded, 7972 skipped, 443 new
 ```
 
 ### Benchmark
 
-> - Apple M1 Pro
-> - macOS Monterey 12.2.1
-> - Clang 13.0.0 arm64-apple-darwin21.3.0
+> - AMD EPYC 7763 64-Core Processor(L1d cache: 32 KiB)
+> - Linux codespaces-8a2c03 6.2.0-1018-azure
+> - GCC (Ubuntu 9.4.0-1ubuntu1~20.04.2) 9.4.0
 
-|               | openwebf/quickjs ([32acbde](https://github.com/openwebf/quickjs/tree/32acbdebc733c4ce7e2ad3d77b9d85318834896b))    | bellard/quickjs ([3ab1c2b](https://github.com/bellard/quickjs/tree/3ab1c2b3148d1c70181607002aac23ecdd2ad482))       | Improvement(%) |
+|               | openwebf/quickjs ([0c1fa5a](https://github.com/openwebf/quickjs/tree/0c1fa5a42da11f65bd54e812c49b9caf3e0a351a))    | bellard/quickjs ([3f81070](https://github.com/bellard/quickjs/tree/3f81070e573e3592728dbbbd04c84c498b20d6dc))       | Improvement(%) |
 | ------------- | ---------- | ---------- |---------- |
-| DeltaBlue      | 1382        | 1021       | +35.35 |
-| RayTrace        | 1935        | 688       | +181.15 |
-| RegExp      | 353        | 255       | +38.43 |
-| NavierStokes  | 2756        | 2658       | +3.68  |
-| PdfJS     | 4934        | 3692       | +33.64 |
-| Gameboy   | 9948        | 9057| +9.83 |
-| Box2D   | 5264        | 4089| +28.77 |
-| Typescript  | 19108        | 13787| +38.59 |
-| Total Score | 3262        | 2339| +39.46 |
-| File Size | 1.5M        | 1.3M        | -15.38 |
+| Richards      | 780        | 644       | +21.12 |
+| DeltaBlue     | 745        | 673       | +10.70 |
+| Crypto        | 645        | 759       | -15.02 |
+| RayTrace      | 1130       | 858       | +31.70 |
+| EarleyBoyer   | 1694       | 1333       | +27.09 |
+| RegExp        | 248        | 204       | +21.57 |
+| Splay         | 1976       | 1711      | +15.49 |
+| SplayLatency  | 7109       | 5574      | +27.54 |
+| NavierStokes  | 1322       | 1418      | -6.77  |
+| PdfJS         | 2989       | 2406      | +24.23 |
+| Mandreel      | 572        | 612       | -6.54  |
+| MandreelLatency | 4343     | 4369      | -0.60  |
+| Gameboy       | 5191       | 4624      | +12.26 |
+| CodeLoad      | 13113      | 12279     | +6.80  |
+| Box2D         | 2787       | 2424      | +14.97 |
+| Typescript    | 8825       | 8390      | +5.18  |
+| Score (version 9) | 1942    | 1750      | +10.97 |

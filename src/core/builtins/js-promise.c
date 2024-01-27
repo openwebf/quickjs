@@ -131,6 +131,14 @@ void JS_SetHostPromiseRejectionTracker(JSRuntime *rt,
   rt->host_promise_rejection_tracker_opaque = opaque;
 }
 
+void JS_SetHostUnhandledPromiseRejectionTracker(JSRuntime *rt,
+                                       JSHostPromiseRejectionTracker *cb,
+                                       void *opaque)
+{
+  rt->host_unhandled_promise_rejection_tracker = cb;
+  rt->host_unhandled_promise_rejection_tracker_opaque = opaque;
+}
+
 void fulfill_or_reject_promise(JSContext *ctx, JSValueConst promise,
                                       JSValueConst value, BOOL is_reject)
 {
@@ -335,6 +343,14 @@ void js_promise_finalizer(JSRuntime *rt, JSValue val)
 
   if (!s)
     return;
+
+  if (s->promise_state == JS_PROMISE_REJECTED && !s->is_handled) {
+    if (rt->host_unhandled_promise_rejection_tracker) {
+      rt->host_unhandled_promise_rejection_tracker(rt, val, s->promise_result, FALSE,
+          rt->host_unhandled_promise_rejection_tracker_opaque);
+    }
+  }
+
   for(i = 0; i < 2; i++) {
     list_for_each_safe(el, el1, &s->promise_reactions[i]) {
       JSPromiseReactionData *rd =

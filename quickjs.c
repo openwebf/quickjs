@@ -206,6 +206,7 @@ struct JSRuntime {
     BOOL current_exception_is_uncatchable : 8;
     /* true if inside an out of memory error, to avoid recursing */
     BOOL in_out_of_memory : 8;
+    BOOL gc_off: 8;
 
     struct JSStackFrame *current_stack_frame;
 
@@ -6159,6 +6160,8 @@ static void JS_RunGCInternal(JSRuntime *rt, BOOL remove_weak_objects)
            registry callbacks. */
         gc_remove_weak_objects(rt);
     }
+
+    if (rt->gc_off) return;
     
     /* decrement the reference of the children of each object. mark =
        1 after this pass. */
@@ -56153,11 +56156,11 @@ int JS_FindWCharacterInAtom(JSRuntime* runtime, JSAtom atom, int (*CharacterMatc
 }
 
 void JS_TurnOffGC(JSRuntime *rt) {
-//  rt->gc_off = TRUE;
+  rt->gc_off = TRUE;
 }
 
 void JS_TurnOnGC(JSRuntime *rt) {
-//  rt->gc_off = FALSE;
+  rt->gc_off = FALSE;
 }
 
 JSValue JS_GetPropertyWithThisObj(JSContext *ctx, JSValueConst obj, JSAtom prop, JSValueConst this_obj, BOOL throw_ref_error) {

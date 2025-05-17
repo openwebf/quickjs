@@ -95,6 +95,75 @@ enum {
     /* any larger tag is FLOAT64 if JS_NAN_BOXING */
 };
 
+
+enum {
+  /* classid tag        */    /* union usage   | properties */
+  JS_CLASS_OBJECT = 1,        /* must be first */
+  JS_CLASS_ARRAY,             /* u.array       | length */
+  JS_CLASS_ERROR,
+  JS_CLASS_NUMBER,            /* u.object_data */
+  JS_CLASS_STRING,            /* u.object_data */
+  JS_CLASS_BOOLEAN,           /* u.object_data */
+  JS_CLASS_SYMBOL,            /* u.object_data */
+  JS_CLASS_ARGUMENTS,         /* u.array       | length */
+  JS_CLASS_MAPPED_ARGUMENTS,  /*               | length */
+  JS_CLASS_DATE,              /* u.object_data */
+  JS_CLASS_MODULE_NS,
+  JS_CLASS_C_FUNCTION,        /* u.cfunc */
+  JS_CLASS_BYTECODE_FUNCTION, /* u.func */
+  JS_CLASS_BOUND_FUNCTION,    /* u.bound_function */
+  JS_CLASS_C_FUNCTION_DATA,   /* u.c_function_data_record */
+  JS_CLASS_GENERATOR_FUNCTION, /* u.func */
+  JS_CLASS_FOR_IN_ITERATOR,   /* u.for_in_iterator */
+  JS_CLASS_REGEXP,            /* u.regexp */
+  JS_CLASS_ARRAY_BUFFER,      /* u.array_buffer */
+  JS_CLASS_SHARED_ARRAY_BUFFER, /* u.array_buffer */
+  JS_CLASS_UINT8C_ARRAY,      /* u.array (typed_array) */
+  JS_CLASS_INT8_ARRAY,        /* u.array (typed_array) */
+  JS_CLASS_UINT8_ARRAY,       /* u.array (typed_array) */
+  JS_CLASS_INT16_ARRAY,       /* u.array (typed_array) */
+  JS_CLASS_UINT16_ARRAY,      /* u.array (typed_array) */
+  JS_CLASS_INT32_ARRAY,       /* u.array (typed_array) */
+  JS_CLASS_UINT32_ARRAY,      /* u.array (typed_array) */
+  JS_CLASS_BIG_INT64_ARRAY,   /* u.array (typed_array) */
+  JS_CLASS_BIG_UINT64_ARRAY,  /* u.array (typed_array) */
+  JS_CLASS_FLOAT16_ARRAY,     /* u.array (typed_array) */
+  JS_CLASS_FLOAT32_ARRAY,     /* u.array (typed_array) */
+  JS_CLASS_FLOAT64_ARRAY,     /* u.array (typed_array) */
+  JS_CLASS_DATAVIEW,          /* u.typed_array */
+  JS_CLASS_BIG_INT,           /* u.object_data */
+  JS_CLASS_MAP,               /* u.map_state */
+  JS_CLASS_SET,               /* u.map_state */
+  JS_CLASS_WEAKMAP,           /* u.map_state */
+  JS_CLASS_WEAKSET,           /* u.map_state */
+  JS_CLASS_MAP_ITERATOR,      /* u.map_iterator_data */
+  JS_CLASS_SET_ITERATOR,      /* u.map_iterator_data */
+  JS_CLASS_ARRAY_ITERATOR,    /* u.array_iterator_data */
+  JS_CLASS_STRING_ITERATOR,   /* u.array_iterator_data */
+  JS_CLASS_REGEXP_STRING_ITERATOR,   /* u.regexp_string_iterator_data */
+  JS_CLASS_GENERATOR,         /* u.generator_data */
+  JS_CLASS_PROXY,             /* u.proxy_data */
+  JS_CLASS_PROMISE,           /* u.promise_data */
+  JS_CLASS_PROMISE_RESOLVE_FUNCTION,  /* u.promise_function_data */
+  JS_CLASS_PROMISE_REJECT_FUNCTION,   /* u.promise_function_data */
+  JS_CLASS_ASYNC_FUNCTION,            /* u.func */
+  JS_CLASS_ASYNC_FUNCTION_RESOLVE,    /* u.async_function_data */
+  JS_CLASS_ASYNC_FUNCTION_REJECT,     /* u.async_function_data */
+  JS_CLASS_ASYNC_FROM_SYNC_ITERATOR,  /* u.async_from_sync_iterator_data */
+  JS_CLASS_ASYNC_GENERATOR_FUNCTION,  /* u.func */
+  JS_CLASS_ASYNC_GENERATOR,   /* u.async_generator_data */
+  JS_CLASS_WEAK_REF,
+  JS_CLASS_FINALIZATION_REGISTRY,
+
+  JS_CLASS_INIT_COUNT, /* last entry for predefined classes */
+};
+
+typedef enum {
+  JS_GC_PHASE_NONE,
+  JS_GC_PHASE_DECREF,
+  JS_GC_PHASE_REMOVE_CYCLES,
+} JSGCPhaseEnum;
+
 typedef struct JSRefCountHeader {
     int ref_count;
 } JSRefCountHeader;
@@ -447,6 +516,14 @@ void JS_DumpMemoryUsage(FILE *fp, const JSMemoryUsage *s, JSRuntime *rt);
 
 /* atom support */
 #define JS_ATOM_NULL 0
+
+enum {
+  __JS_ATOM_NULL = JS_ATOM_NULL,
+#define DEF(name, str) JS_ATOM_ ## name,
+#include "quickjs-atom.h"
+#undef DEF
+  JS_ATOM_END,
+};
 
 JSAtom JS_NewAtomLen(JSContext *ctx, const char *str, size_t len);
 JSAtom JS_NewAtom(JSContext *ctx, const char *str);
@@ -942,7 +1019,7 @@ typedef JSModuleDef *JSModuleLoaderFunc2(JSContext *ctx,
 /* return -1 if exception, 0 if OK */
 typedef int JSModuleCheckSupportedImportAttributes(JSContext *ctx, void *opaque,
                                                    JSValueConst attributes);
-                                                   
+
 /* module_normalize = NULL is allowed and invokes the default module
    filename normalizer */
 void JS_SetModuleLoaderFunc(JSRuntime *rt,
@@ -1137,7 +1214,39 @@ int JS_SetModuleExportList(JSContext *ctx, JSModuleDef *m,
 /* associate a JSValue to a C module */
 int JS_SetModulePrivateValue(JSContext *ctx, JSModuleDef *m, JSValue val);
 JSValue JS_GetModulePrivateValue(JSContext *ctx, JSModuleDef *m);
-                        
+
+
+/* Additional API for WebF uses */
+int JS_AtomIsTaggedInt(JSAtom v);
+uint32_t JS_AtomToUInt32(JSAtom atom);
+uint16_t* JS_ToUnicode(JSContext* ctx, JSValue value, uint32_t* length);
+JSValue JS_NewUnicodeString(JSContext* ctx, const uint16_t* code, uint32_t length);
+JSValue JS_NewRawUTF8String(JSContext* ctx, const uint8_t* code, uint32_t length);
+JSAtom JS_NewUnicodeAtom(JSContext* ctx, const uint16_t* code, uint32_t length);
+JS_BOOL JS_IsArrayBufferView(JSValue value);
+JS_BOOL JS_HasClassId(JSRuntime* runtime, JSClassID classId);
+int JS_AtomIs8Bit(JSRuntime* runtime, JSAtom atom);
+JSGCPhaseEnum JS_GetEnginePhase(JSRuntime* runtime);
+const uint8_t* JS_AtomRawCharacter8(JSRuntime* runtime, JSAtom atom, uint32_t *plen);
+const uint8_t* JS_ValueRawCharacter8(JSValueConst value, uint32_t *plen);
+const uint16_t* JS_AtomRawCharacter16(JSRuntime* runtime, JSAtom atom, uint32_t *plen);
+const uint16_t* JS_ValueRawCharacter16(JSValueConst value, uint32_t *plen);
+uint32_t JS_ValueGetStringLen(JSValueConst value);
+uint32_t JS_AtomGetLen(JSRuntime* runtime, JSAtom atom);
+int JS_FindCharacterInAtom(JSRuntime* runtime, JSAtom atom, int (*CharacterMatchFunction)(char));
+int JS_FindWCharacterInAtom(JSRuntime* runtime, JSAtom atom, int (*CharacterMatchFunction)(uint16_t));
+void JS_TurnOffGC(JSRuntime *rt);
+void JS_TurnOnGC(JSRuntime *rt);
+JSValue JS_GetPropertyWithThisObj(JSContext *ctx, JSValueConst obj, JSAtom prop, JSValueConst this_obj, JS_BOOL throw_ref_error);
+JS_BOOL JS_IsStringWideChar(JSValueConst value);
+JS_BOOL JS_IsAtomWideChar(JSRuntime* runtime, JSAtom atom);
+JSAtom JS_DupAtomRT(JSRuntime *rt, JSAtom v);
+int JS_SetGlobalObjectOpaque(JSContext* ctx, void *opaque);
+JS_BOOL JS_IsProxy(JSValue value);
+JS_BOOL JS_IsPromise(JSValue value);
+JS_BOOL JS_IsArrayBuffer(JSValue value);
+JSValue JS_GetProxyTarget(JSValue value);
+
 /* debug value output */
 
 typedef struct {

@@ -55984,18 +55984,18 @@ uint16_t* JS_ToUnicode(JSContext* ctx, JSValue value, uint32_t* length) {
   if (!string->is_wide_char) {
     uint8_t* p = string->u.str8;
 #if defined(_WIN32)
-    int utf16_str_len = MultiByteToWideChar(CP_ACP, 0, reinterpret_cast<const char*>(p), -1, NULL, 0) - 1;
+    int utf16_str_len = MultiByteToWideChar(CP_ACP, 0, (const char*)(p), -1, NULL, 0) - 1;
     if (utf16_str_len == -1) {
-      return nullptr;
+      return NULL;
     }
     // Allocate memory for the UTF-16 string, including the null terminator
     buffer = (uint16_t*)CoTaskMemAlloc((utf16_str_len + 1) * sizeof(WCHAR));
-    if (buffer == nullptr) {
-      return nullptr;
+    if (buffer == NULL) {
+      return NULL;
     }
 
     // Convert the ASCII string to UTF-16
-    MultiByteToWideChar(CP_ACP, 0, reinterpret_cast<const char*>(p), -1, (WCHAR*)buffer, utf16_str_len + 1);
+    MultiByteToWideChar(CP_ACP, 0, (const char*)(p), -1, (WCHAR*)buffer, utf16_str_len + 1);
     *length = utf16_str_len;
 #else
     uint32_t len = *length = string->len;
@@ -56052,20 +56052,20 @@ JSAtom JS_NewUnicodeAtom(JSContext* ctx, const uint16_t* code, uint32_t length) 
 
 BOOL JS_IsArrayBufferView(JSValue value) {
   if (!JS_IsObject(value))
-    return false;
+    return FALSE;
   JSObject* p = JS_VALUE_GET_OBJ(value);
   return p->class_id >= JS_CLASS_UINT8C_ARRAY && p->class_id <= JS_CLASS_DATAVIEW;
 }
 
 BOOL JS_HasClassId(JSRuntime* runtime, JSClassID classId) {
   if (runtime->class_count <= classId)
-    return false;
+    return FALSE;
   return runtime->class_array[classId].class_id == classId;
 }
 
 int JS_AtomIs8Bit(JSRuntime* runtime, JSAtom atom) {
   if (__JS_AtomIsTaggedInt(atom))
-    return true;
+    return TRUE;
   JSString* string = runtime->atom_array[atom];
   return string->is_wide_char == 0;
 }
@@ -56193,21 +56193,21 @@ int JS_SetGlobalObjectOpaque(JSContext* ctx, void *opaque) {
 
 JS_BOOL JS_IsProxy(JSValue value) {
   if (!JS_IsObject(value))
-    return false;
+    return FALSE;
   JSObject* p = JS_VALUE_GET_OBJ(value);
   return p->class_id == JS_CLASS_PROXY;
 }
 
 JS_BOOL JS_IsPromise(JSValue value) {
   if (!JS_IsObject(value))
-    return false;
+    return FALSE;
   JSObject* p = JS_VALUE_GET_OBJ(value);
   return p->class_id == JS_CLASS_PROMISE;
 }
 
 BOOL JS_IsArrayBuffer(JSValue value) {
   if (!JS_IsObject(value))
-    return false;
+    return FALSE;
   JSObject* p = JS_VALUE_GET_OBJ(value);
   return p->class_id == JS_CLASS_ARRAY_BUFFER;
 }

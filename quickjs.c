@@ -56177,6 +56177,8 @@ BOOL JS_IsStringWideChar(JSValueConst value) {
 }
 
 BOOL JS_IsAtomWideChar(JSRuntime* runtime, JSAtom atom) {
+  if (__JS_AtomIsTaggedInt(atom)) return FALSE;
+
   JSString* string = runtime->atom_array[atom];
   return string->is_wide_char;
 }

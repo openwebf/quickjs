@@ -56077,7 +56077,7 @@ JSGCPhaseEnum JS_GetEnginePhase(JSRuntime* runtime) {
 const uint8_t* JS_AtomRawCharacter8(JSRuntime* runtime, JSAtom atom, uint32_t *plen) {
   if (__JS_AtomIsTaggedInt(atom)) {
     char* buf = (char*)js_malloc_rt(runtime, 64);
-    snprintf(buf, sizeof(buf), "%u", __JS_AtomToUInt32(atom));
+    snprintf(buf, 64, "%u", __JS_AtomToUInt32(atom));
     *plen = strlen(buf);
     return (uint8_t*)(buf);
   }
@@ -56101,7 +56101,7 @@ const uint8_t* JS_ValueRawCharacter8(JSValueConst value, uint32_t *plen) {
 const uint16_t* JS_AtomRawCharacter16(JSRuntime* runtime, JSAtom atom, uint32_t *plen) {
   if (__JS_AtomIsTaggedInt(atom)) {
     char* buf = (char*)js_malloc_rt(runtime, 64);
-    snprintf(buf, sizeof(buf), "%u", __JS_AtomToUInt32(atom));
+    snprintf(buf, 64, "%u", __JS_AtomToUInt32(atom));
     *plen = strlen(buf);
     return (uint16_t*)(buf);
   }

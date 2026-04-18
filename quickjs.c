@@ -47,6 +47,11 @@
 #include "libunicode.h"
 #include "dtoa.h"
 
+/* WebF JS thread profiler hooks */
+#include "js_profiler_hooks.h"
+#define WEBF_PROF_JS_FUNCTION 0
+#define WEBF_PROF_C_FUNCTION  1
+
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
 #if defined(EMSCRIPTEN)
@@ -16820,10 +16825,64 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
         not_a_function:
             return JS_ThrowTypeError(caller_ctx, "not a function");
         }
-        return call_func(caller_ctx, func_obj, this_obj, argc,
-                         (JSValueConst *)argv, flags);
+        {
+            int32_t _cprof_idx = -1;
+            JSValue _cret;
+            if (webf_js_profiler_enabled()) {
+                /* Try to extract function name atom from 'name' property */
+                JSAtom _cfunc_name = 0;
+                JSProperty *_cpr;
+                JSShapeProperty *_cprs = find_own_property(&_cpr, p, JS_ATOM_name);
+                if (_cprs) {
+                    JSValue _name_val = _cpr->u.value;
+                    if (JS_VALUE_GET_TAG(_name_val) == JS_TAG_STRING) {
+                        _cfunc_name = JS_ValueToAtom(caller_ctx, _name_val);
+                    }
+                }
+                _cprof_idx = webf_js_profiler_on_function_entry(WEBF_PROF_C_FUNCTION, _cfunc_name);
+                if (_cprof_idx >= 0 && _cfunc_name != 0 && !webf_js_profiler_is_atom_known(_cfunc_name)) {
+                    const char *_cname = JS_AtomToCString(caller_ctx, _cfunc_name);
+                    if (_cname) {
+                        webf_js_profiler_register_atom_name(_cfunc_name, _cname);
+                        JS_FreeCString(caller_ctx, _cname);
+                    }
+                }
+                if (_cfunc_name != 0)
+                    JS_FreeAtom(caller_ctx, _cfunc_name);
+            }
+            _cret = call_func(caller_ctx, func_obj, this_obj, argc,
+                             (JSValueConst *)argv, flags);
+            if (_cprof_idx >= 0)
+                webf_js_profiler_on_function_exit(_cprof_idx);
+            return _cret;
+        }
     }
     b = p->u.func.function_bytecode;
+
+    /* WebF profiler: record JS function entry */
+    int32_t _prof_idx = -1;
+    if (webf_js_profiler_enabled()) {
+        JSAtom _func_atom = b->func_name;
+        /* For anonymous functions, try to get the inferred name from 'name' property */
+        if (_func_atom == 0) {
+            JSProperty *_fpr;
+            JSShapeProperty *_fprs = find_own_property(&_fpr, p, JS_ATOM_name);
+            if (_fprs && JS_VALUE_GET_TAG(_fpr->u.value) == JS_TAG_STRING) {
+                _func_atom = JS_ValueToAtom(caller_ctx, _fpr->u.value);
+            }
+        }
+        _prof_idx = webf_js_profiler_on_function_entry(WEBF_PROF_JS_FUNCTION, _func_atom);
+        if (_prof_idx >= 0 && _func_atom != 0 && !webf_js_profiler_is_atom_known(_func_atom)) {
+            const char *_fname = JS_AtomToCString(caller_ctx, _func_atom);
+            if (_fname) {
+                webf_js_profiler_register_atom_name(_func_atom, _fname);
+                JS_FreeCString(caller_ctx, _fname);
+            }
+        }
+        /* Free atom only if we created it (not the bytecode's own atom) */
+        if (_func_atom != 0 && _func_atom != b->func_name)
+            JS_FreeAtom(caller_ctx, _func_atom);
+    }
 
     if (unlikely(argc < b->arg_count || (flags & JS_CALL_FLAG_COPY_ARGV))) {
         arg_allocated_size = b->arg_count;
@@ -19388,6 +19447,9 @@ static JSValue JS_CallInternal(JSContext *caller_ctx, JSValueConst func_obj,
             JS_FreeValue(ctx, *pval);
         }
     }
+    /* WebF profiler: record JS function exit */
+    if (_prof_idx >= 0)
+        webf_js_profiler_on_function_exit(_prof_idx);
     rt->current_stack_frame = sf->prev_frame;
     return ret_val;
 }
